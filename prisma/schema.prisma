@@ -1,0 +1,1403 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model application_form {
+  id                     Int       @id @default(autoincrement())
+  application_id         BigInt?
+  student_id             Int?
+  university_id          Int?
+  course_id              Int?
+  personal_information   String?   @db.LongText
+  educational_background String?   @db.LongText
+  language_qualification String?   @db.LongText
+  reasons_to_choose      String?   @db.LongText
+  family                 String?   @db.LongText
+  financial_support      String?   @db.LongText
+  mailling_address       String?   @db.LongText
+  declaration            Boolean?  @default(false)
+  uploads                String?   @db.Text
+  application_fee        Boolean?  @default(false)
+  send_to_uni            Boolean   @default(false)
+  status                 Int?      @default(4) @db.TinyInt
+  display                Boolean   @default(true)
+  created_at             DateTime? @db.Timestamp(0)
+  updated_at             DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model apply_now {
+  id                Int      @id @default(autoincrement())
+  name              String   @db.VarChar(255)
+  city              String   @db.VarChar(255)
+  phone_number      String   @db.VarChar(255)
+  last_education    String   @db.VarChar(500)
+  intrested_country String   @db.VarChar(255)
+  created_at        DateTime @default(now()) @db.Timestamp(0)
+  updated_at        DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @updatedAt @db.Timestamp(0)
+}
+
+model blogs {
+  id                Int            @id @default(autoincrement())
+  user_id           Int?
+  category_id       Int?
+  title             String?        @db.VarChar(255)
+  sm_question       String?        @db.Text
+  sm_answer         String?        @db.Text
+  review_detail     String?        @db.Text
+  rating_count      Int            @default(0)
+  review_count      Int            @default(0)
+  avg_review_value  Decimal        @default(0.00) @db.Decimal(12, 2)
+  slug              String         @unique(map: "uq_blogs_slug") @db.VarChar(255)
+  short_description String?        @db.Text
+  description       String?        @db.LongText
+  image             String?        @db.VarChar(255)
+  image_ext         String?        @db.VarChar(50)
+  is_active         Boolean        @default(true)
+  seo               String?        @db.LongText
+  views             Int            @default(0)
+  likes             Int            @default(0)
+  ip                String?        @db.LongText
+  custom_post_type  String?        @db.VarChar(255)
+  post_attributes   String?        @db.LongText
+  is_featured       Boolean        @default(false)
+  sort_order        Int?
+  created_at        DateTime       @default(now()) @db.Timestamp(0)
+  updated_at        DateTime       @default(now()) @updatedAt @db.Timestamp(0)
+  enable_meta_tags  Boolean        @default(false)
+  category          blog_category? @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_blogs_category")
+  user              users?         @relation(fields: [user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_blogs_user")
+
+  @@index([category_id], map: "blogs_category_id_fkey")
+  @@index([user_id], map: "blogs_user_id_fkey")
+}
+
+model university_details {
+  id                    Int        @id @default(autoincrement())
+  sm_question           String     @db.Text
+  sm_answer             String     @db.Text
+  review_detail         String     @db.Text
+  rating_count          Int        @default(0)
+  review_count          Int        @default(0)
+  avg_review_value      Decimal    @default(0.00) @db.Decimal(12, 2)
+  user_id               Int?
+  name                  String     @db.VarChar(255)
+  slug                  String     @db.VarChar(255)
+  founded_in            String?    @db.VarChar(255)
+  area                  String?    @db.VarChar(255)
+  country               String?    @db.VarChar(255)
+  city                  String?    @db.VarChar(255)
+  address               String?    @db.LongText
+  postcode              String?    @db.VarChar(255)
+  phone_no              BigInt?
+  agency_number         String?    @db.VarChar(20)
+  total_students        Int?
+  international_student Int?
+  scholarship           Boolean?   @default(false)
+  logo                  String?    @db.VarChar(255)
+  feature_image         String?    @db.Text
+  about                 String?    @db.LongText
+  guide                 String?    @db.LongText
+  expanse               String?    @db.LongText
+  languages             String?    @db.Text
+  accommodation         String?    @db.VarChar(255)
+  accommodation_detail  String?    @db.LongText
+  intake                String?    @db.Text
+  ranking               Float?     @default(0.00)
+  designation           String?    @db.VarChar(255)
+  alternate_email       String?    @db.VarChar(255)
+  website               String?    @db.VarChar(255)
+  active                Boolean    @default(true)
+  popular               Boolean    @default(false)
+  package               String     @default("free") @db.VarChar(255)
+  expiry                DateTime?  @db.DateTime(0)
+  display               Boolean    @default(true)
+  created_at            DateTime   @default(now()) @db.Timestamp(0)
+  updated_at            DateTime   @default(now()) @updatedAt @db.Timestamp(0)
+  whishlist             wishlist[]
+}
+
+model blog_category {
+  id          Int       @id @default(autoincrement())
+  name        String?
+  slug        String?
+  description String?   @db.Text
+  sort_order  Int?      @db.TinyInt
+  is_active   Boolean?
+  seo         String?   @db.LongText
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+  blogs       blogs[]
+}
+
+model wishlist {
+  id            Int                 @id @default(autoincrement())
+  user_id       Int?
+  course_id     Int?
+  created_at    DateTime?           @db.Timestamp(0)
+  updated_at    DateTime?           @db.Timestamp(0)
+  university_id Int?
+  course        courses?            @relation(fields: [course_id], references: [id])
+  university    university_details? @relation(fields: [university_id], references: [id])
+  user          users?              @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([course_id])
+  @@index([university_id])
+}
+
+model students {
+  id               Int       @id @default(autoincrement())
+  user_id          Int?
+  name             String?   @db.VarChar(255)
+  nationality      String?   @db.VarChar(255)
+  city             String    @default("") @db.VarChar(100)
+  gender           String?   @db.VarChar(255)
+  prefered_program String?   @db.VarChar(255)
+  active           Int?      @default(1)
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @updatedAt @db.Timestamp(0)
+  users            users[]   @relation("studentstousers")
+}
+
+model chat_list {
+  id         Int       @id @default(autoincrement())
+  user_id    Int?
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model client_feedbacks {
+  id                    Int       @id @default(autoincrement()) @db.UnsignedInt
+  full_name             String
+  contact_number        String    @db.VarChar(255)
+  consultant_id         String
+  rating                String    @db.VarChar(255)
+  average_rating        Float?    @db.Float
+  behaviour_satis_level String
+  timely_response       String
+  call_response         String
+  knowledge             String
+  likelihood            String
+  customer_experience   String
+  created_at            DateTime? @db.Timestamp(0)
+  updated_at            DateTime? @updatedAt @db.Timestamp(0)
+  first_followup        String?   @db.Text
+  second_followup       String?   @db.Text
+  third_followup        String?   @db.Text
+  choosable_status      String?   @db.Text
+  assigned_employees    String?   @db.Text
+  assigned_date         DateTime? @db.DateTime(0)
+  first_date            String?   @db.Text
+  second_date           String?   @db.Text
+  third_date            String?   @db.Text
+}
+
+model cms {
+  id         Int       @id @default(autoincrement())
+  page       String?   @db.VarChar(100)
+  meta       String?   @db.LongText
+  seo_title  String?   @db.VarChar(255)
+  seo_desc   String?   @db.VarChar(255)
+  seo_tags   String?   @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  updated_at DateTime? @default(dbgenerated("('0000-00-00 00:00:00')")) @updatedAt @db.Timestamp(0)
+}
+
+model replies {
+  reply_id          Int       @id @default(autoincrement()) @db.UnsignedInt
+  parent_comment_id String
+  first_name        String
+  last_name         String
+  article_id        String    @default("0")
+  email             String
+  phone_number      String
+  comment           String
+  status            Int?
+  created_at        DateTime? @db.Timestamp(0)
+  updated_at        DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model visa_countries {
+  id             Int       @id @default(autoincrement())
+  slug           String?   @db.VarChar(255)
+  country_name   String    @db.VarChar(255)
+  country_image  String    @db.VarChar(1000)
+  price          String?   @db.VarChar(200)
+  discount_price String    @default("0") @db.VarChar(200)
+  currency       String?   @db.VarChar(200)
+  description    String?   @db.Text
+  banner_image   String?   @db.VarChar(255)
+  created_at     DateTime? @default(now()) @db.Timestamp(0)
+  updated_at     DateTime? @default(now()) @db.Timestamp(0)
+  continent      String?   @db.VarChar(255)
+}
+
+model visa_requirements {
+  id                Int       @id @default(autoincrement())
+  visa_country_id   Int
+  visa_type_id      Int
+  title             String    @db.VarChar(255)
+  description       String    @db.LongText
+  visa_country_name String    @db.VarChar(255)
+  visa_type_name    String    @db.VarChar(255)
+  created_at        DateTime? @db.Timestamp(0)
+  updated_at        DateTime? @db.Timestamp(0)
+}
+
+model visa_details {
+  id                          Int       @id @default(autoincrement())
+  visa_title                  String    @db.VarChar(1000)
+  sm_question                 String    @db.Text
+  sm_answer                   String    @db.Text
+  review_detail               String    @default("[]") @db.Text
+  rating_count                Int
+  review_count                Int
+  avg_review_value            Decimal   @db.Decimal(12, 2)
+  visa_description            String    @db.Text
+  slug                        String    @default("#") @db.VarChar(255)
+  visa_image                  String?   @db.VarChar(1000)
+  seo                         String?   @default("") @db.LongText
+  country_id                  Int?      @default(0)
+  emailSended                 String?   @db.VarChar(255)
+  first_followup              String?   @db.VarChar(255)
+  first_followup_change_date  String?   @db.VarChar(255)
+  second_followup             String?   @db.VarChar(255)
+  second_followup_change_date String?   @db.VarChar(255)
+  third_followup              String?   @db.VarChar(255)
+  third_followup_change_date  String?   @db.VarChar(255)
+  choosable_status            String    @default("Pending") @db.VarChar(255)
+  assigned_employees          String?   @db.VarChar(255)
+  assigned_date               String?   @db.VarChar(255)
+  first_date                  String?   @db.VarChar(255)
+  second_date                 String?   @db.VarChar(255)
+  third_date                  String?   @db.VarChar(255)
+  not_connected_status        Int       @default(0) @db.TinyInt
+  created_at                  DateTime? @default(now()) @db.Timestamp(0)
+  updated_at                  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model visa_types {
+  id              Int       @id @default(autoincrement())
+  visa_country_id Int
+  name            String    @db.VarChar(255)
+  country_name    String    @db.VarChar(255)
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+}
+
+model visa_faqs {
+  id                Int       @id @default(autoincrement())
+  visa_country_id   Int
+  visa_type_id      Int
+  title             String    @db.VarChar(255)
+  description       String    @db.LongText
+  visa_country_name String    @db.VarChar(255)
+  visa_type_name    String    @db.VarChar(255)
+  created_at        DateTime? @db.Timestamp(0)
+  updated_at        DateTime? @db.Timestamp(0)
+}
+
+model visit_visas {
+  id                          Int                 @id @default(autoincrement()) @db.UnsignedInt
+  name                        String
+  email                       String
+  emailSended                 String?
+  phone                       String
+  gender                      visit_visas_gender?
+  passport_number             String?
+  taxpayer_type               String?
+  bank_statment               String?             @db.Text
+  adult_status                String?             @db.Text
+  children_status             String?             @db.Text
+  first_followup              String?
+  first_followup_change_date  String?
+  second_followup             String?
+  second_followup_change_date String?
+  third_followup              String?
+  third_followup_change_date  String?
+  first_date                  String?
+  second_date                 String?
+  third_date                  String?
+  assigned_employees          String?
+  assigned_date               String?
+  choosable_status            String              @default("Pending") @db.VarChar(255)
+  not_connected_status        String?
+  last_education              String?             @db.MediumText
+  country                     String?             @db.VarChar(200)
+  state                       String?             @db.VarChar(200)
+  city                        String?             @db.VarChar(200)
+  country_name                String?             @db.VarChar(255)
+  country_id                  Int?
+  quality_status              String?             @db.VarChar(30)
+  quality_comment             String?             @db.VarChar(255)
+  quality_date                String?             @db.VarChar(30)
+  created_at                  DateTime?           @db.Timestamp(0)
+  updated_at                  DateTime?           @db.Timestamp(0)
+}
+
+model components_logs {
+  id         Int     @id @default(autoincrement())
+  log_id     Int?
+  page_id    Int?
+  title      String? @db.VarChar(255)
+  type       String? @db.VarChar(100)
+  meta       String? @db.LongText
+  sort_order Int?
+}
+
+model consultants {
+  id             Int       @id @default(autoincrement())
+  user_id        Int?
+  name           String?   @db.VarChar(255)
+  company_name   String?   @db.VarChar(255)
+  employeeno     String?   @db.VarChar(255)
+  nationality    String?   @db.VarChar(255)
+  state          String?   @db.VarChar(255)
+  city           String?   @db.VarChar(255)
+  address        String?   @db.VarChar(255)
+  designation    String?   @db.VarChar(255)
+  email          String?   @db.VarChar(255)
+  phone          String?   @db.VarChar(255)
+  comment        String?   @db.VarChar(255)
+  average_rating Float?    @db.Float
+  active         String    @default("1") @db.VarChar(255)
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @updatedAt @db.Timestamp(0)
+  users          users[]   @relation("consultantstousers")
+}
+
+model contact_button {
+  id            Int      @id @default(autoincrement())
+  student_id    Int?
+  university_id Int      @default(0)
+  course_id     Int      @default(0)
+  date          DateTime @db.Date
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+  updated_at    DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @updatedAt @db.Timestamp(0)
+}
+
+model contact_us_messages {
+  id                   Int       @id @default(autoincrement()) @db.UnsignedInt
+  office_location      String
+  user_name            String
+  user_email           String
+  emailSended          Int       @default(0)
+  smsSended            Int       @default(0)
+  phone_number         String
+  reply                String?   @db.Text
+  message              String    @db.Text
+  first_followup       String    @default("none")
+  second_followup      String    @default("none")
+  third_followup       String    @default("none")
+  choosable_status     String?   @default("Pending") @db.Text
+  assigned_employees   String    @default("0")
+  created_at           DateTime? @db.Timestamp(0)
+  updated_at           DateTime? @updatedAt @db.Timestamp(0)
+  assigned_date        DateTime? @db.DateTime(0)
+  first_date           String?   @db.Text
+  second_date          String?   @db.Text
+  third_date           String?   @db.Text
+  not_connected_status String?   @db.VarChar(255)
+  quality_status       String?   @db.VarChar(30)
+  quality_comment      String?   @db.VarChar(255)
+  quality_date         String?   @db.VarChar(30)
+}
+
+model countries {
+  id                        Int      @id @default(autoincrement())
+  code                      String   @db.VarChar(255)
+  country                   String   @db.VarChar(255)
+  selected                  Boolean  @default(false)
+  image                     String?  @db.Text
+  currency                  String   @db.VarChar(255)
+  consultation_fee          Float    @default(0) @db.Float
+  consultation_fee_discount Float    @default(0) @db.Float
+  created_at                DateTime @default(now()) @db.Timestamp(0)
+  updated                   DateTime @default(now()) @updatedAt @db.Timestamp(0)
+}
+
+model courses {
+  id                Int        @id @default(autoincrement())
+  sm_question       String?    @db.Text
+  sm_answer         String?    @db.Text
+  review_detail     String?    @db.Text
+  rating_count      Int        @default(0)
+  review_count      Int        @default(0)
+  avg_review_value  Float      @default(0) @db.Float
+  name              String     @db.VarChar(255)
+  university_id     Int
+  subject_id        Int
+  qualification     String?    @db.VarChar(255)
+  duration          Int?
+  duration_qty      Int?
+  duration_type     String?    @db.VarChar(255)
+  yearly_fee        Float?     @db.Float
+  application_fee   Float?     @db.Float
+  languages         String?    @db.Text
+  starting_date     DateTime?  @db.DateTime(0)
+  deadline          DateTime?  @db.DateTime(0)
+  about             String?    @db.Text
+  entry_requirments String?    @db.Text
+  curriculum        String?    @db.Text
+  scholarship       String?    @db.VarChar(255)
+  sort_order        Int        @default(0)
+  active            Boolean    @default(true)
+  display           Boolean    @default(true)
+  popular           Boolean    @default(false)
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @default(now()) @updatedAt
+  wishlist          wishlist[]
+  subjects          subjects[] @relation("coursestosubjects")
+
+  @@index([subject_id], map: "index_courses")
+  @@index([university_id], map: "index_university")
+}
+
+model cstudents {
+  id                               Int      @id @default(autoincrement())
+  name                             String   @db.VarChar(255)
+  passport_number                  String   @db.VarChar(255)
+  course_doc                       String   @db.VarChar(1000)
+  intrested_country_doc            String   @db.VarChar(1000)
+  passport_doc                     String   @db.VarChar(1000)
+  photo_doc                        String   @db.VarChar(1000)
+  educational_degree_doc           String   @db.VarChar(1000)
+  educational_certificate_doc      String   @db.VarChar(1000)
+  recomendation_letter_doc         String   @db.VarChar(1000)
+  study_plan                       String   @db.VarChar(1000)
+  ielts_english_proficiency_letter String   @db.VarChar(1000)
+  consultant_id                    Int
+  intial_documents_assessment      String   @default("on") @db.VarChar(50)
+  course_finalaztion               String   @default("None") @db.VarChar(50)
+  application_submitted            String   @default("None") @db.VarChar(50)
+  got_admission                    String   @default("None") @db.VarChar(50)
+  visa_applied                     String?  @default("None") @db.VarChar(50)
+  case_closed                      String   @default("None") @db.VarChar(50)
+  created_at                       DateTime @default(now()) @db.Timestamp(0)
+  updated_at                       DateTime @default(now()) @updatedAt @db.Timestamp(0)
+}
+
+model custom_attributes {
+  id                  Int       @id @default(autoincrement()) @db.UnsignedInt
+  custom_product_type Int?      @db.UnsignedInt
+  custom_post_type    Int?
+  attribute_name      String    @db.VarChar(255)
+  attribute_slug      String    @db.VarChar(255)
+  input_type          String    @db.VarChar(255)
+  attribute_data      String?   @db.VarChar(255)
+  is_active           Boolean   @default(true)
+  created_at          DateTime? @db.Timestamp(0)
+  updated_at          DateTime? @updatedAt @db.Timestamp(0)
+
+  @@index([custom_product_type], map: "custom_attributes_custom_product_type_foreign")
+}
+
+model custom_categories {
+  id                  Int       @id @default(autoincrement()) @db.UnsignedInt
+  slider_id           Int?
+  custom_product_type Int?      @db.UnsignedInt
+  custom_post_type    Int?
+  parent_id           Int?
+  name                String    @db.VarChar(255)
+  slug                String    @db.VarChar(255)
+  description         String?   @db.Text
+  sort_order          Int       @default(0) @db.TinyInt
+  is_active           Boolean
+  image               String?   @db.VarChar(255)
+  color               String?   @db.VarChar(100)
+  meta_title          String?   @db.VarChar(255)
+  meta_description    String?   @db.VarChar(255)
+  meta_keywords       String?   @db.Text
+  created_at          DateTime? @db.Timestamp(0)
+  updated_at          DateTime? @updatedAt @db.Timestamp(0)
+
+  @@index([custom_product_type], map: "custom_categories_custom_product_type_foreign")
+}
+
+model custom_post_types {
+  id                 Int       @id @default(autoincrement()) @db.UnsignedInt
+  name               String    @db.VarChar(255)
+  slug               String?   @db.VarChar(255)
+  sort_order         Int       @default(0) @db.TinyInt
+  has_post_seo       Boolean   @default(false)
+  is_category_enable Boolean   @default(true)
+  has_featured_image Boolean   @default(true)
+  has_long_desc      Int?      @default(0) @db.TinyInt
+  has_desc           Int?      @default(0) @db.TinyInt
+  has_author         Int?      @default(0) @db.TinyInt
+  has_image_gallery  Int?      @db.TinyInt
+  show_sku           Int?      @db.TinyInt
+  show_price         Int?      @db.TinyInt
+  show_quantity      Int?      @db.TinyInt
+  show_discount      Int?      @db.TinyInt
+  has_brands         Int?      @default(0) @db.TinyInt
+  filters            Int?      @default(0) @db.TinyInt
+  importable         Int?      @default(0) @db.TinyInt
+  inventory_enabled  Int?      @db.TinyInt
+  has_related        Int?      @db.TinyInt
+  has_logs           Int?      @db.TinyInt
+  is_active          Boolean   @default(true)
+  created_at         DateTime? @db.Timestamp(0)
+  updated_at         DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model discountoffers {
+  id                          Int       @id @default(autoincrement())
+  name                        String    @db.VarChar(255)
+  lastEducation               String    @db.VarChar(255)
+  lastEducationPer            String    @db.VarChar(255)
+  city                        String    @default("") @db.VarChar(255)
+  phone                       String    @db.VarChar(255)
+  email                       String    @db.VarChar(255)
+  emailSended                 Int       @default(0)
+  smsSended                   Int       @default(0)
+  location                    String    @db.VarChar(200)
+  familyDetail                String    @db.Text
+  do_status                   Int       @default(1)
+  created_at                  DateTime? @default(now()) @db.DateTime(0)
+  updated_at                  DateTime? @updatedAt @db.DateTime(0)
+  assigned_employees          String    @default("") @db.Text
+  first_followup              String?   @db.Text
+  first_followup_change_date  String?   @db.Text
+  second_followup             String?   @db.Text
+  second_followup_change_date String?   @db.Text
+  third_followup              String?   @db.Text
+  third_followup_change_date  String?   @db.Text
+  choosable_status            String?   @default("Pending") @db.Text
+  assigned_date               DateTime? @db.DateTime(0)
+  first_date                  String?   @db.Text
+  second_date                 String?   @db.Text
+  third_date                  String?   @db.Text
+  not_connected_status        Boolean?  @default(false)
+  quality_status              String?   @db.VarChar(30)
+  quality_comment             String?   @db.VarChar(255)
+  quality_date                String?   @db.VarChar(30)
+}
+
+model document_download_users {
+  id                          BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  document_id                 BigInt                    @db.UnsignedBigInt
+  name                        String                    @db.VarChar(255)
+  email                       String                    @db.VarChar(255)
+  emailSended                 Int                       @default(0)
+  smsSended                   Int                       @default(0)
+  phone                       String                    @db.VarChar(20)
+  first_followup              String?                   @db.VarChar(255)
+  first_followup_change_date  String?                   @db.Text
+  second_followup             String?                   @db.VarChar(255)
+  second_followup_change_date String?                   @db.Text
+  third_followup              String?                   @db.VarChar(255)
+  third_followup_change_date  String?                   @db.Text
+  choosable_status            String?                   @default("Pending") @db.Text
+  assigned_employees          String?                   @db.Text
+  assigned_date               DateTime?                 @db.DateTime(0)
+  first_date                  String?                   @db.Text
+  second_date                 String?                   @db.Text
+  third_date                  String?                   @db.Text
+  not_connected_status        Int                       @default(0) @db.TinyInt
+  unsubscribed                Int                       @default(0)
+  quality_status              String?                   @db.VarChar(255)
+  quality_comment             String?                   @db.Text
+  quality_date                String?                   @db.VarChar(100)
+  created_at                  DateTime?                 @db.Timestamp(0)
+  updated_at                  DateTime?                 @db.Timestamp(0)
+  student_support_documents   student_support_documents @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "document_download_users_ibfk_1")
+
+  @@index([document_id], map: "document_id")
+  @@map("document_download_users")
+}
+
+model downloads {
+  id         Int       @id @default(autoincrement())
+  product_id Int?
+  name       String    @db.VarChar(255)
+  email      String    @db.VarChar(255)
+  phone      String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model complaints {
+  id                          Int       @id @default(autoincrement())
+  name                        String?   @db.VarChar(255)
+  email                       String?   @db.VarChar(255)
+  emailSended                 Int       @default(0)
+  smsSended                   Int       @default(0)
+  phone                       String?   @db.VarChar(255)
+  company                     String?   @db.VarChar(255)
+  subject                     String?   @db.VarChar(255)
+  message                     String?   @db.Text
+  is_read                     Int?      @db.TinyInt
+  created_at                  DateTime? @db.Timestamp(0)
+  updated_at                  DateTime? @updatedAt @db.Timestamp(0)
+  type                        String    @default("") @db.VarChar(50)
+  location                    String    @default("lahore") @db.VarChar(200)
+  assigned_employees          String    @default("") @db.Text
+  first_followup              String?   @db.Text
+  first_followup_change_date  String?   @db.Text
+  second_followup             String?   @db.Text
+  second_followup_change_date String?   @db.Text
+  third_followup              String?   @db.Text
+  third_followup_change_date  String?   @db.Text
+  choosable_status            String?   @default("Pending") @db.Text
+  assigned_date               DateTime? @db.DateTime(0)
+  first_date                  String?   @db.Text
+  second_date                 String?   @db.Text
+  third_date                  String?   @db.Text
+  not_connected_status        Boolean?  @default(false)
+  quality_status              String?   @db.VarChar(30)
+  quality_comment             String?   @db.VarChar(255)
+  quality_date                String?   @db.VarChar(30)
+}
+
+model student_support_documents {
+  id                      BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  file_name               String                    @db.VarChar(255)
+  file_desc               String?                   @db.VarChar(1000)
+  file_download           Int?
+  document_file           String                    @db.VarChar(255)
+  created_at              DateTime?                 @db.Timestamp(0)
+  updated_at              DateTime?                 @db.Timestamp(0)
+  document_download_users document_download_users[]
+
+  @@map("student_support_documents")
+}
+
+model error_logs {
+  id          Int       @id @default(autoincrement())
+  message     String?   @db.LongText
+  code        String?   @db.VarChar(255)
+  line        Int?
+  file        String?   @db.VarChar(255)
+  is_resolved Int       @default(0) @db.TinyInt
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model free_consulations {
+  id                          Int       @id @default(autoincrement()) @db.UnsignedInt
+  name                        String    @db.VarChar(255)
+  email                       String    @db.VarChar(255)
+  emailSended                 Int       @default(0)
+  smsSended                   Int       @default(0)
+  phone_number                String    @db.VarChar(255)
+  last_education              String    @db.VarChar(255)
+  country                     String    @default("") @db.VarChar(100)
+  city                        String    @db.VarChar(255)
+  apply_for                   String    @db.VarChar(255)
+  interested_country          String?   @db.Text
+  first_followup              String    @default("None") @db.VarChar(1000)
+  first_followup_change_date  String?   @db.Text
+  second_followup             String    @default("None") @db.VarChar(1000)
+  second_followup_change_date String?   @db.Text
+  third_followup              String    @default("None") @db.VarChar(1000)
+  third_followup_change_date  String?   @db.Text
+  choosable_status            String?   @default("Pending") @db.Text
+  created_at                  DateTime? @db.Timestamp(0)
+  updated_at                  DateTime? @updatedAt @db.Timestamp(0)
+  assigned_employees          String    @default("") @db.Text
+  assigned_date               DateTime? @db.DateTime(0)
+  first_date                  String?   @db.Text
+  second_date                 String?   @db.Text
+  third_date                  String?   @db.Text
+  not_connected_status        Boolean?  @default(false)
+  unsubscribed                Int       @default(0)
+  quality_status              String?   @db.VarChar(30)
+  quality_comment             String?   @db.VarChar(255)
+  quality_date                String?   @db.VarChar(30)
+}
+
+model group_modules {
+  id         Int     @id @default(autoincrement())
+  group_id   Int?
+  module     String? @db.VarChar(100)
+  show       Int?    @default(0) @map("_show") @db.TinyInt
+  create     Int?    @default(0) @map("_create") @db.TinyInt
+  edit       Int?    @default(0) @map("_edit") @db.TinyInt
+  delete     Int?    @default(0) @map("_delete") @db.TinyInt
+  import     Int?    @default(0) @map("_import") @db.TinyInt
+  show_email Int?    @default(0) @db.TinyInt
+  show_phone Int?    @default(0) @db.TinyInt
+}
+
+model guides {
+  id                Int       @id @default(autoincrement())
+  user_id           Int?
+  guide_type        String?   @db.VarChar(255)
+  university_id     Int?
+  subject_id        Int?
+  title             String?   @db.Text
+  sm_question       String    @db.Text
+  sm_answer         String    @db.Text
+  review_detail     String    @db.Text
+  rating_count      Int
+  review_count      Int
+  avg_review_value  Decimal   @db.Decimal(12, 2)
+  sub_title         String?   @db.Text
+  slug              String?   @db.VarChar(255)
+  short_description String?   @db.Text
+  description       String?   @db.LongText
+  image             String?   @db.VarChar(255)
+  image_ext         String?   @db.VarChar(50)
+  is_active         Int       @db.TinyInt
+  seo               String?   @db.LongText
+  views             Int?      @default(0)
+  likes             Int       @default(0)
+  ip                String?   @db.LongText
+  custom_post_type  Int?
+  post_attributes   String?   @db.LongText
+  is_featured       Int?      @default(0) @db.TinyInt
+  sort_order        Int?
+  created_at        DateTime? @db.Timestamp(0)
+  updated_at        DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model issued_items {
+  id           Int       @id @default(autoincrement())
+  post_id      Int?
+  unit_amount  Int?
+  total_amount Int?
+  qty          Int?
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model job_applies {
+  id           Int       @id @default(autoincrement()) @db.UnsignedInt
+  name         String
+  email        String
+  phone_number String
+  start_date   String
+  resume       String
+  job_id       String
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model job_opprtunities {
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  title            String
+  job_type         String
+  city             String
+  province         String
+  country          String
+  site_based       String
+  skills           String
+  experience       String
+  requirements     String    @db.Text
+  responsibilities String    @db.Text
+  description      String    @db.Text
+  mail_status      Int       @default(0)
+  post_status      Int       @default(0)
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model logos {
+  id         Int       @id @default(autoincrement())
+  type       String?   @db.VarChar(50)
+  alt        String?   @db.VarChar(255)
+  link       String?   @db.VarChar(255)
+  image      String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model media {
+  id         Int       @id @default(autoincrement())
+  name       String?   @db.VarChar(255)
+  type       String?   @db.VarChar(50)
+  size       String?   @db.VarChar(100)
+  meta       String?   @db.LongText
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model menus {
+  id           Int       @id @default(autoincrement())
+  name         String?   @db.VarChar(255)
+  is_primary   Int?      @default(0) @db.TinyInt
+  is_secondary Int?      @default(0) @db.TinyInt
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model menu_items {
+  id         Int       @id @default(autoincrement())
+  menu_id    Int?
+  parent     Int?
+  title      String?   @db.VarChar(255)
+  type       String?   @db.VarChar(100)
+  url        String?   @db.VarChar(255)
+  icon       String?   @db.VarChar(255)
+  sort_order Int?
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model messages {
+  id          BigInt    @id @default(autoincrement())
+  sender_id   Int?
+  receiver_id Int?
+  list_id     Int?
+  is_student  Boolean?
+  message     String?   @db.LongText
+  read        Boolean?  @default(false)
+  display     Int?      @default(1)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+  deleted_at  DateTime? @db.Timestamp(0)
+}
+
+model minhaj_university_leads {
+  id                 Int       @id @default(autoincrement())
+  full_name          String?   @db.VarChar(255)
+  roll_number        String?   @db.VarChar(255)
+  department         String?   @db.VarChar(255)
+  email              String?   @db.VarChar(255)
+  last_education     String?   @db.VarChar(255)
+  country            String?   @db.VarChar(255)
+  city               String?   @db.VarChar(255)
+  interested_country String?   @db.VarChar(255)
+  apply_for          String?   @db.VarChar(255)
+  whatsapp_number    String?   @db.VarChar(255)
+  first_followup     String?   @db.VarChar(1000)
+  first_date         String?   @db.Text
+  second_followup    String?   @db.VarChar(1000)
+  second_date        String?   @db.Text
+  third_followup     String?   @db.VarChar(1000)
+  third_date         String?   @db.Text
+  choosable_status   String?   @default("Pending") @db.VarChar(100)
+  shared_user_ids    String?   @db.VarChar(255)
+  assigned_date      DateTime? @db.DateTime(0)
+  emailSended        String?   @default("0") @db.VarChar(2)
+  smsSended          String?   @default("0") @db.VarChar(2)
+  quality_status     String?   @db.VarChar(30)
+  quality_comment    String?   @db.VarChar(255)
+  quality_date       String?   @db.VarChar(30)
+  created_at         DateTime? @db.Timestamp(0)
+  updated_at         DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model news {
+  id            Int       @id @default(autoincrement())
+  university_id Int?
+  consultant_id Int?
+  title         String?   @db.Text
+  description   String?   @db.LongText
+  created_at    DateTime? @db.Timestamp(0)
+  updated_at    DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model notifications {
+  id             Int       @id @default(autoincrement())
+  type           String?   @db.VarChar(50)
+  name           String?   @db.VarChar(255)
+  email          String?   @db.VarChar(255)
+  message        String?   @db.Text
+  user_id        Int?
+  post_id        Int?
+  order_id       Int?
+  mail_id        Int?
+  university_id  Int?
+  consultant_id  Int?
+  student_id     Int?
+  application_id Int?
+  review_id      Int?
+  meta           String?   @db.Text
+  is_read        Int?      @db.TinyInt
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model online_consultants {
+  id                           Int       @id @default(autoincrement()) @db.UnsignedInt
+  application_type             String
+  student_name                 String
+  student_email                String?
+  emailSended                  Int       @default(0)
+  smsSended                    Int       @default(0)
+  student_phone_number         String?
+  student_last_education       String?
+  student_country              String?
+  student_state                String?
+  student_city                 String?
+  student_apply_for            String?
+  interested_country           String?   @db.VarChar(255)
+  student_passport_image       String?
+  student_last_education_image String?
+  first_followup               String?
+  first_followup_change_date   String?   @db.Text
+  second_followup              String?
+  second_followup_change_date  String?   @db.Text
+  third_followup               String?
+  third_followup_change_date   String?   @db.Text
+  choosable_status             String?   @default("Pending") @db.Text
+  created_at                   DateTime? @db.Timestamp(0)
+  updated_at                   DateTime? @updatedAt @db.Timestamp(0)
+  assigned_employees           String?   @db.Text
+  assigned_date                DateTime? @db.DateTime(0)
+  first_date                   String?   @db.Text
+  second_date                  String?   @db.Text
+  third_date                   String?   @db.Text
+  not_connected_status         Boolean?  @default(false)
+  quality_status               String?   @db.VarChar(30)
+  quality_comment              String?   @db.VarChar(255)
+  quality_date                 String?   @db.VarChar(30)
+}
+
+model pages {
+  id            Int       @id @default(autoincrement())
+  title         String    @db.VarChar(255)
+  slug          String    @db.VarChar(255)
+  is_default    Int?      @db.TinyInt
+  meta          String?   @db.LongText
+  is_home       Int?      @default(0) @db.TinyInt
+  show_title    Int?      @db.TinyInt
+  slider_id     Int?
+  header_image  String?   @db.VarChar(255)
+  meta_title    String?   @db.VarChar(255)
+  meta_desc     String?   @db.VarChar(255)
+  meta_keywords String?   @db.VarChar(255)
+  seo           String?   @db.Text
+  custom_css    String?   @db.LongText
+  created_at    DateTime? @db.Timestamp(0)
+  updated_at    DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model pages_components {
+  id         Int     @id @default(autoincrement())
+  page_id    Int?
+  title      String? @db.VarChar(255)
+  type       String? @db.VarChar(100)
+  meta       String? @db.LongText
+  sort_order Int?
+}
+
+model page_logs {
+  id         Int       @id @default(autoincrement())
+  user_id    Int?
+  page_id    Int?
+  type       String?   @db.VarChar(100)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model password_resets {
+  email      String    @db.VarChar(255)
+  token      String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+
+  @@index([email(length: 191)], map: "password_resets_email_index")
+  @@ignore
+}
+
+model payment_details {
+  id               Int       @id @default(autoincrement())
+  visit_visa_id    Int
+  transaction_id   String    @db.VarChar(255)
+  card_holder_name String?   @db.VarChar(255)
+  amount           String?   @db.VarChar(255)
+  currency         String?   @db.VarChar(255)
+  status           String?   @db.VarChar(255)
+  description      String?   @db.Text
+  transaction_date String?   @db.VarChar(255)
+  transaction_time String?   @db.VarChar(255)
+  receipt_url      String?   @db.VarChar(255)
+  created_at       DateTime? @db.DateTime(0)
+  updated_at       DateTime? @updatedAt @db.DateTime(0)
+}
+
+model posts {
+  id                Int       @id @default(autoincrement())
+  user_id           Int?
+  category_id       Int?
+  brand_id          Int?
+  title             String?   @db.VarChar(255)
+  slug              String?   @db.VarChar(255)
+  short_description String?   @db.Text
+  description       String?   @db.LongText
+  image             String?   @db.VarChar(255)
+  sku               String?   @db.VarChar(255)
+  price             Int?
+  discounted_price  Int?
+  quantity          Int?
+  gallery           String?   @db.LongText
+  discount          Int?
+  post_type         Int?
+  meta_keywords     String?   @db.Text
+  meta_description  String?   @db.VarChar(255)
+  meta_title        String?   @db.VarChar(255)
+  link_canonical    String?   @db.VarChar(255)
+  is_featured       Int?      @default(0) @db.TinyInt
+  attributes        String?   @db.LongText
+  related           String?   @db.Text
+  best_seller       Int?      @db.TinyInt
+  top_rated         Int?      @db.TinyInt
+  unit              String?   @db.VarChar(50)
+  weight            Float?
+  is_active         Int?      @default(0) @db.TinyInt
+  created_at        DateTime? @db.Timestamp(0)
+  updated_at        DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model post_comments {
+  id           Int       @id @default(autoincrement())
+  post_id      Int?
+  name         String?   @db.VarChar(255)
+  email        String?   @db.VarChar(255)
+  phone        String?   @db.VarChar(255)
+  subject      String?   @db.VarChar(255)
+  company_name String?
+  comment      String?   @db.Text
+  is_active    Int?      @default(0) @db.TinyInt
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model post_components {
+  id         Int     @id @default(autoincrement())
+  post_id    Int?
+  title      String? @db.VarChar(255)
+  type       String? @db.VarChar(100)
+  meta       String? @db.LongText
+  sort_order Int?
+}
+
+model post_logs {
+  id         Int       @id @default(autoincrement())
+  post_type  Int?
+  post_id    Int?
+  user_id    Int?
+  post_title String?   @db.VarChar(255)
+  type       String?   @db.VarChar(50)
+  meta       String?   @db.LongText
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model post_reviews {
+  id         Int       @id @default(autoincrement())
+  post_id    Int?
+  user_id    Int?
+  name       String?   @db.VarChar(255)
+  email      String?   @db.VarChar(255)
+  summary    String?   @db.Text
+  review     String?   @db.Text
+  price      Int?
+  value      Int?
+  quality    Int?
+  is_active  Int?      @default(0) @db.TinyInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+}
+
+model subjects {
+  id         Int       @id @default(autoincrement())
+  name       String?   @db.VarChar(255)
+  icon       String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @updatedAt @db.Timestamp(0)
+  courses    courses[] @relation("coursestosubjects")
+
+  @@map("subjects")
+}
+
+model apps_countries {
+  id           Int    @id @default(autoincrement())
+  country_code String @default("") @db.VarChar(2)
+  country_name String @default("") @db.VarChar(100)
+}
+
+model comment {
+  comment_id   Int       @id @default(autoincrement()) @db.UnsignedInt
+  first_name   String
+  last_name    String
+  article_id   String    @default("0")
+  email        String
+  mail_status  Int?      @default(0)
+  phone_number String
+  comment      String
+  status       String    @default("0")
+  article_url  String?   @db.VarChar(255)
+  type         String?   @db.VarChar(255)
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @db.Timestamp(0)
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model permissions {
+  id                Int       @id @default(autoincrement()) @db.UnsignedInt
+  admin_id          BigInt    @db.UnsignedBigInt
+  admin_name        String
+  admin_email       String    @unique(map: "permissions_admin_email_unique")
+  admin_password    String
+  admin_permissions String    @db.LongText
+  created_at        DateTime? @db.Timestamp(0)
+  updated_at        DateTime? @db.Timestamp(0)
+  users             users[]   @relation("permissionstousers")
+}
+
+model preferences {
+  id                    Int       @id @default(autoincrement())
+  mailer                String?   @db.LongText
+  footer_meta           String?   @db.LongText
+  footer_text           String?   @db.VarChar(255)
+  footer_logo           String?   @db.VarChar(255)
+  contact_email         String?   @db.VarChar(255)
+  contact_social        String?   @db.LongText
+  contact_meta          String?   @db.LongText
+  contact_address       String?   @db.Text
+  logo                  String?   @db.VarChar(255)
+  sticky_logo           String?   @db.VarChar(255)
+  optimize_image        Boolean   @default(false)
+  banner                String?   @db.VarChar(255)
+  banner_link           String?   @db.VarChar(255)
+  general_meta          String?   @db.LongText
+  analytics_code        String?   @db.VarChar(100)
+  analytics_view        String?   @db.VarChar(100)
+  analytics_file        String?   @db.VarChar(255)
+  enabled_analytics     Int?      @db.TinyInt
+  counters              String?   @db.LongText
+  notification_settings String?   @db.LongText
+  created_at            DateTime? @db.Timestamp(0)
+  updated_at            DateTime? @db.Timestamp(0)
+}
+
+model resumes {
+  id                   Int            @id @default(autoincrement()) @db.UnsignedInt
+  student_id           String
+  full_name            String
+  email                String
+  email_status         String?
+  link_status          String?
+  phone_number         String
+  gender               resumes_gender
+  birth_date           DateTime       @db.Date
+  nationality          String
+  about_yourself       String?        @db.Text
+  profile_image        String?
+  postal_code          String?
+  city                 String
+  country              String
+  address              String         @db.Text
+  education_details    String?        @db.LongText
+  experience_details   String?        @db.LongText
+  skills               String?        @db.LongText
+  languages            String?        @db.LongText
+  other_languages_data String?        @db.LongText
+  driving_licence      String?        @db.LongText
+  hobbies_and_interest String?        @db.LongText
+  awards               String?        @db.LongText
+  projects             String?        @db.LongText
+  created_at           DateTime?      @db.Timestamp(0)
+  updated_at           DateTime?      @db.Timestamp(0)
+  mother_language      String?        @db.VarChar(255)
+}
+
+model reviews {
+  id            Int       @id @default(autoincrement())
+  university_id Int?
+  consultant_id Int?
+  user_id       Int?
+  stars         Int?
+  review        String?   @db.Text
+  reply         String?   @db.Text
+  created_at    DateTime? @db.Timestamp(0)
+  updated_at    DateTime? @db.Timestamp(0)
+}
+
+model services {
+  id         Int       @id @default(autoincrement())
+  name       String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model sitemap_page {
+  page_id    Int    @id @default(autoincrement())
+  page_title String @db.Text
+  page_url   String @db.Text
+}
+
+model socialite_users {
+  id          Int       @id @default(autoincrement())
+  provider    String?   @db.VarChar(100)
+  provider_id String?   @db.VarChar(100)
+  name        String?   @db.VarChar(255)
+  email       String?   @db.VarChar(255)
+  username    String?   @db.VarChar(255)
+  avatar      String?   @db.VarChar(255)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+}
+
+model stores {
+  id         Int       @id @default(autoincrement())
+  title      String?   @db.VarChar(255)
+  address    String?   @db.VarChar(255)
+  phone      String?   @db.VarChar(255)
+  email      String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model subscribers {
+  id          Int       @id @default(autoincrement())
+  email       String?   @db.VarChar(255)
+  first_name  String?   @db.VarChar(255)
+  last_name   String?   @db.VarChar(255)
+  designation String?   @db.VarChar(255)
+  company     String?   @db.VarChar(255)
+  city        String?   @db.VarChar(255)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tbl_social_leads {
+  id                                Int
+  social_leads_student_name         String?   @db.VarChar(255)
+  social_leads_phone_number         String?   @db.VarChar(255)
+  social_leads_email                String?   @db.VarChar(60)
+  social_leads_first_followup       String?   @db.VarChar(1000)
+  social_leads_second_followup      String?   @db.VarChar(1000)
+  social_leads_third_followup       String?   @db.VarChar(1000)
+  social_leads_first_date           String?   @db.VarChar(30)
+  social_leads_second_date          String?   @db.VarChar(30)
+  social_leads_third_date           String?   @db.VarChar(30)
+  location                          String?   @db.VarChar(30)
+  social_leads_city                 String?   @db.VarChar(100)
+  social_leads_status               String?   @db.VarChar(50)
+  social_leads_not_connected_status Boolean?
+  social_leads_shared_user_ids      String?   @db.VarChar(100)
+  social_leads_assigned_date_time   DateTime? @db.DateTime(0)
+  social_leads_assigned_date        String?   @db.Text
+  social_leads_email_status         Boolean?  @default(false)
+  social_leads_sms_status           Int       @default(0)
+  social_leads_unsubscribed         Int       @default(0)
+  created_at                        DateTime  @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+model user_articles {
+  id          Int       @id @default(autoincrement())
+  user_id     Int?
+  file        String?   @db.VarChar(255)
+  description String?   @db.Text
+  status      Int?      @db.TinyInt
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+}
+
+model user_groups {
+  id         Int       @id @default(autoincrement())
+  name       String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model users {
+  id                          Int           @id @default(autoincrement())
+  first_name                  String        @db.VarChar(255)
+  last_name                   String?       @db.VarChar(255)
+  email                       String        @db.VarChar(255)
+  emailSended                 Int           @default(0)
+  smsSended                   Int           @default(0)
+  phone                       String?       @db.VarChar(255)
+  dob                         String?       @db.VarChar(255)
+  address                     String?       @db.MediumText
+  country                     String?       @db.VarChar(255)
+  city                        String?       @db.VarChar(255)
+  postal                      String?       @db.VarChar(255)
+  password                    String        @db.VarChar(255)
+  user_type                   String        @db.VarChar(255)
+  brief                       String?       @db.Text
+  is_verified                 Boolean       @default(false)
+  is_active                   Boolean       @default(false)
+  is_read                     Int           @default(0)
+  is_login                    Boolean       @default(true)
+  group_id                    Int?
+  talentlms_id                Int?
+  remember_token              String?       @db.VarChar(100)
+  image                       String?       @db.VarChar(255)
+  created_at                  DateTime?     @db.Timestamp(0)
+  updated_at                  DateTime?     @db.Timestamp(0)
+  secret                      String?       @db.VarChar(255)
+  provider                    String?       @db.VarChar(50)
+  fb_token                    String?       @db.VarChar(255)
+  first_followup              String        @default("None") @db.VarChar(1000)
+  first_followup_change_date  String?       @db.Text
+  second_followup             String        @default("None") @db.VarChar(1000)
+  second_followup_change_date String?       @db.Text
+  third_followup              String        @default("None") @db.VarChar(1000)
+  third_followup_change_date  String?       @db.Text
+  choosable_status            String?       @default("Pending") @db.Text
+  assigned_employees          String        @default("") @db.Text
+  assigned_date               DateTime?     @db.DateTime(0)
+  first_date                  String?       @db.Text
+  second_date                 String?       @db.Text
+  third_date                  String?       @db.Text
+  not_connected_status        Int?          @default(0)
+  unsubscribed                Int           @default(0)
+  quality_status              String?       @db.VarChar(30)
+  quality_comment             String?       @db.VarChar(255)
+  quality_date                String?       @db.VarChar(30)
+  blogs                       blogs[]
+  wishlist                    wishlist[]
+  consultants                 consultants[] @relation("consultantstousers")
+  permissions                 permissions[] @relation("permissionstousers")
+  students                    students[]    @relation("studentstousers")
+}
+
+model visitors {
+  id           Int       @id @default(autoincrement())
+  ip_address   String?   @db.VarChar(255)
+  uri          String?   @db.VarChar(255)
+  referer      String?   @db.VarChar(255)
+  device       String?   @db.VarChar(100)
+  referer_type String?   @db.VarChar(100)
+  location     String?   @db.VarChar(100)
+  region       String?   @db.VarChar(100)
+  city         String?   @db.VarChar(100)
+  timezone     String?   @db.VarChar(100)
+  latitude     String?   @db.VarChar(100)
+  longitude    String?   @db.VarChar(100)
+  user_id      Int?
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @db.Timestamp(0)
+}
+
+model web_events {
+  id                   Int      @id @default(autoincrement())
+  type                 String   @db.VarChar(255)
+  action_button        String   @db.VarChar(255)
+  page_hit_name        String   @db.VarChar(255)
+  whatsapp_button_text String   @db.VarChar(255)
+  updated_at           DateTime @default(now()) @db.Timestamp(0)
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+}
+
+enum visit_visas_gender {
+  Male
+  Female
+  Other
+}
+
+enum resumes_gender {
+  Male
+  Female
+  Other
+}
