@@ -177,6 +177,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { name: "Complaints", path: "/admin/inbox/complaints" }
       ]
     },
+    { name: "Discount Offer", icon: Bell, path: "/admin/discount-offer" },
     // {
     //   name: "University Contacts",
     //   icon: Contact,
