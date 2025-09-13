@@ -29,7 +29,7 @@ const handleSubmit = async (e) => {
   try {
     setIsSubmitting(true)
 
-    const response  = await fetch("/api/internal/login/", {
+    const response  = await fetch("/api/frontend/login/", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(form)

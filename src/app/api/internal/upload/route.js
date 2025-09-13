@@ -13,7 +13,7 @@ const s3 = new S3Client({
 });
 
 export async function POST(req) {
-  try {
+  try {                                                         
     const formData = await req.formData();
     const file = formData.get('image');
     const uploadType = formData.get('uploadType') || 'general'; // Get upload type from form data
@@ -33,10 +33,10 @@ export async function POST(req) {
       Key: s3Key, // Use the generated S3 key with path
       Body: buffer,
       ContentType: file.type,
-      // ACL: 'public-read', // Removed because bucket does not allow ACLs
+      ACL: 'public-read', // Removed because bucket does not allow ACLs
     };
 
-    await s3.send(new PutObjectCommand(uploadParams));
+   await s3.send(new PutObjectCommand(uploadParams));
 
     const url = `https://${bucket}.s3.${process.env.AWS_DEFAULT_REGION}.amazonaws.com/${s3Key}`;
 

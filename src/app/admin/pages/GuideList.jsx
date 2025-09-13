@@ -36,6 +36,9 @@ const GuideList = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [universities, setUniversities] = useState([]); // Add universities state
   const [subjects, setSubjects] = useState([]); // Add subjects state
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState("");
   
   const [formData, setFormData] = useState({
     type: "University",
@@ -43,20 +46,7 @@ const GuideList = () => {
     subject_id: "",
     title: "",
     slug: "",
-    subTitle: "",
-    sortOrder: "",
     description: "",
-    schema: [{ question: "", answer: "" }],
-    reviews: [
-      {
-        rating: "",
-        date: "",
-        authorName: "",
-        publisherName: "",
-        reviewName: "",
-        reviewDescription: "",
-      },
-    ],
     featuredImage: null,
     metaTags: false,
     metaTitle: "",
@@ -181,76 +171,92 @@ const GuideList = () => {
     }
   };
 
-  // Fetch universities for dropdown
-  const fetchUniversities = async () => {
-    try {
-      console.log('Fetching universities...');
-      const response = await fetch('/api/internal/university');
-      console.log('Universities response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Universities API response:', data);
-        
-        // Handle different response formats
-        if (data.success && data.data) {
-          setUniversities(data.data);
-          console.log('Universities loaded (success format):', data.data.length);
-        } else if (Array.isArray(data)) {
-          setUniversities(data);
-          console.log('Universities loaded (array format):', data.length);
-        } else if (data.data && Array.isArray(data.data)) {
-          setUniversities(data.data);
-          console.log('Universities loaded (data.data format):', data.data.length);
-        } else {
-          console.log('Unexpected universities response format:', data);
-          setUniversities([]);
+  const fetchdata = async () => {
+    const [universitiesResponse, subjectsResponse] = await Promise.all([
+      fetch('/api/internal/new/getuniversity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         }
-      } else {
-        console.error('Failed to fetch universities:', response.status, response.statusText);
+      }),
+      fetch('/api/internal/new/getsubject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }),
+    ]);
+
+    if(!universitiesResponse.ok || !subjectsResponse.ok) throw new Error('Failed to fetch data')
+
+    const universityData = await universitiesResponse.json();
+    const subjectsData = await subjectsResponse.json();
+
+    setUniversities(universityData.data);
+    setSubjects(subjectsData.data);
+
+  }
+
+  const uploadImage = async (file, uploadType = 'university-logo') => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('uploadType', uploadType); // Add upload type for proper S3 path
+
+      const response = await fetch('/api/internal/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
       }
+
+      const data = await response.json();
+      return data.url;
     } catch (error) {
-      console.error('Error fetching universities:', error);
+      console.error('Error uploading image:', error);
+      throw error;
     }
   };
 
-  // Fetch subjects for dropdown
-  const fetchSubjects = async () => {
+  const handleFileUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
     try {
-      console.log('Fetching subjects...');
-      const response = await fetch('/api/internal/subject');
-      console.log('Subjects response status:', response.status);
+      setIsUploading(true);
+
+      // Determine upload type based on field
+      let uploadType = 'university-logo'; // default
+      if (field === 'featured_image') uploadType = 'university-feature';
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Subjects API response:', data);
-        
-        // Handle different response formats
-        if (Array.isArray(data)) {
-          setSubjects(data);
-          console.log('Subjects loaded (array format):', data.length);
-        } else if (data.data && Array.isArray(data.data)) {
-          setSubjects(data.data);
-          console.log('Subjects loaded (data.data format):', data.data.length);
-        } else if (data.success && data.data) {
-          setSubjects(data.data);
-          console.log('Subjects loaded (success format):', data.data.length);
-        } else {
-          console.log('Unexpected subjects response format:', data);
-          setSubjects([]);
-        }
-      } else {
-        console.error('Failed to fetch subjects:', response.status, response.statusText);
-      }
+      const imageUrl = await uploadImage(file, uploadType);
+
+      setUploadedImages(imageUrl);
+      
     } catch (error) {
-      console.error('Error fetching subjects:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Error',
+        text: error.message || 'Failed to upload image',
+        confirmButtonColor: '#0B6D76'
+      });
+    } finally {
+      setIsUploading(false);
     }
+  };
+
+  const removeImage = () => {
+    
+    setUploadedImages("");
+
+
   };
 
   useEffect(() => { 
     fetchGuides(page);
-    fetchUniversities(); // Fetch universities when component mounts
-    fetchSubjects(); // Fetch subjects when component mounts
+    fetchdata(); // Fetch universities when component mounts
   }, [page, appliedSearchTerm, appliedStartDate, appliedEndDate, appliedFeaturedFilter, appliedActiveFilter]);
 
   const handleSearch = () => {
@@ -427,24 +433,9 @@ const GuideList = () => {
   };
 
   const handleEditClick = (guide) => {
-    console.log('=== EDIT GUIDE DEBUG ===');
-    console.log('Raw guide data from API:', guide);
-    console.log('All guide properties:', Object.keys(guide));
-    console.log('Guide values:', Object.entries(guide));
-    
-    // Log specific fields to see what's available
-    console.log('Title field:', guide.title);
-    console.log('Sub title field:', guide.sub_title);
-    console.log('Guide type field:', guide.guide_type);
-    console.log('Description field:', guide.description);
-    console.log('Schema fields:', { sm_question: guide.sm_question, sm_answer: guide.sm_answer });
-    console.log('Reviews field:', guide.review_detail);
-    console.log('Active field:', guide.is_active);
-    console.log('Featured field:', guide.is_featured);
-    console.log('SEO field:', guide.seo);
-    console.log('=== END DEBUG ===');
-    
+
     setSelected(guide);
+    setUploadedImages(guide.image)
     setFormData({
       type: guide.guide_type || "University",
       university_id: guide.university_id || "",
@@ -464,39 +455,11 @@ const GuideList = () => {
       active: guide.is_active === 1,
       is_featured: guide.is_featured === 1,
     });
-    
-    console.log('Form data set for editing:', {
-      type: guide.guide_type || "University",
-      university_id: guide.university_id || "",
-      subject_id: guide.subject_id || "",
-      title: guide.title || "",
-      slug: guide.slug || "",
-      subTitle: guide.sub_title || "",
-      sortOrder: guide.sort_order || "",
-      description: guide.description || "",
-      schema: parseSchemaFromDatabase(guide.sm_question, guide.sm_answer),
-      reviews: parseReviewsFromDatabase(guide.review_detail),
-      metaTags: parseMetaTagsFromDatabase(guide.seo),
-      metaTitle: parseMetaTitleFromDatabase(guide.seo),
-      metaDescription: parseMetaDescriptionFromDatabase(guide.seo),
-      metaKeywords: parseMetaKeywordsFromDatabase(guide.seo),
-      active: guide.is_active === 1,
-      is_featured: guide.is_featured === 1,
-    });
-    
-    // Log the raw guide data for debugging
-    console.log('Raw guide data from API:', guide);
-    console.log('Parsed schema:', parseSchemaFromDatabase(guide.sm_question, guide.sm_answer));
-    console.log('Parsed reviews:', parseReviewsFromDatabase(guide.review_detail));
-    console.log('Parsed meta tags:', parseMetaTagsFromDatabase(guide.seo));
-    console.log('Parsed meta title:', parseMetaTitleFromDatabase(guide.seo));
-    console.log('Parsed meta description:', parseMetaDescriptionFromDatabase(guide.seo));
-    console.log('Parsed meta keywords:', parseMetaKeywordsFromDatabase(guide.seo));
+   
     
     setEditMode(true);
     setShowModal(true);
-    fetchUniversities(); // Fetch universities when edit modal opens
-    fetchSubjects(); // Fetch subjects when edit modal opens
+    fetchdata();
   };
 
   const handleInputChange = (e) => {
@@ -530,55 +493,13 @@ const GuideList = () => {
     }
   };
 
-  const handleSchemaChange = (index, key, value) => {
-    const updated = [...formData.schema];
-    updated[index][key] = value;
-    setFormData({ ...formData, schema: updated });
-  };
-
-  const handleReviewChange = (index, key, value) => {
-    const updated = [...formData.reviews];
-    updated[index][key] = value;
-    setFormData({ ...formData, reviews: updated });
-  };
-
-  const addSchema = () =>
-    setFormData((prev) => ({
-      ...prev,
-      schema: [...prev.schema, { question: "", answer: "" }],
-    }));
-
-  const removeSchema = (index) => {
-    const updated = [...formData.schema];
-    updated.splice(index, 1);
-    setFormData({ ...formData, schema: updated });
-  };
-
-  const addReview = () =>
-    setFormData((prev) => ({
-      ...prev,
-      reviews: [
-        ...prev.reviews,
-        {
-          rating: "",
-          date: "",
-          authorName: "",
-          publisherName: "",
-          reviewName: "",
-          reviewDescription: "",
-        },
-      ],
-    }));
-
-  const removeReview = (index) => {
-    const updated = [...formData.reviews];
-    updated.splice(index, 1);
-    setFormData({ ...formData, reviews: updated });
-  };
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+
+      setIsLoading(true);
+
       const updateData = {
         title: formData.title,
         sub_title: formData.subTitle,
@@ -586,10 +507,8 @@ const GuideList = () => {
         description: formData.description,
         is_active: formData.active,
         is_featured: formData.is_featured,
-        schema: JSON.stringify(formData.schema),
-        reviews: JSON.stringify(formData.reviews),
+        image: uploadedImages,
         slug: formData.slug,
-        sort_order: formData.sortOrder,
         metaTags: formData.metaTags,
         metaTitle: formData.metaTitle,
         metaDescription: formData.metaDescription,
@@ -640,6 +559,8 @@ const GuideList = () => {
         text: 'Failed to update guide. Please check your connection and try again.',
         confirmButtonColor: '#ef4444'
       });
+    } finally{
+      setIsLoading(false)
     }
   };
 
@@ -1004,30 +925,7 @@ const GuideList = () => {
                   </div>
                 </div>
 
-                {/* SubTitle / Sort Order */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium">Sub Title</label>
-                    <input
-                      type="text"
-                      name="subTitle"
-                      value={formData.subTitle}
-                      onChange={handleInputChange}
-                      className="w-full border px-3 py-2 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium">Sort Order</label>
-                    <input
-                      type="number"
-                      name="sortOrder"
-                      value={formData.sortOrder}
-                      onChange={handleInputChange}
-                      className="w-full border px-3 py-2 rounded"
-                    />
-                  </div>
-                </div>
-
+                
                 {/* Summernote Description */}
                 <div>
                   <label className="block text-sm font-medium">Description</label>
@@ -1037,7 +935,47 @@ const GuideList = () => {
                   />
                 </div>
 
-                {/* Schema */}
+                {/* Featured Image */}
+                <div>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Featured Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'featured')}
+                        className="block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-md file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-blue-50 file:text-blue-700
+                          hover:file:bg-blue-100"
+                        disabled={isUploading}
+                      />
+                      {uploadedImages && (
+                        <div className="mt-2">
+                          <img
+                            src={uploadedImages}
+                            alt="Logo preview"
+                            className="h-20 object-contain"
+                          />
+                          
+                          <button
+                            type="button"
+                            onClick={() => removeImage()}
+                            className="mt-1 text-red-600 text-sm"
+                            disabled={isUploading}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                      {isUploading && !uploadedImages && (
+                        <div className="mt-2 text-sm text-gray-500">Uploading Image...</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
 
                 {/* Reviews */}
@@ -1095,15 +1033,7 @@ const GuideList = () => {
                     />
                     <span>Active</span>
                   </label>
-                  <label className="flex items-center gap-2 text-center space-x-2 text-sm">
-                    <input
-                      type="checkbox"
-                      name="is_featured"
-                      checked={formData.is_featured}
-                      onChange={handleInputChange}
-                    />
-                    <span>Featured</span>
-                  </label>
+                  
                 </div>
 
                 {/* Submit Buttons */}
@@ -1118,8 +1048,9 @@ const GuideList = () => {
                   <button
                     type="submit"
                     className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
+                    disabled={isLoading}
                   >
-                    Save Changes
+                    {isLoading ? "Updating..." : "Save Changes"}
                   </button>
                 </div>
               </form>

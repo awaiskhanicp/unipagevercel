@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import Heading from '../atoms/Heading';
 import SimpleCourseCard from '../molecules/SimpleCourseCard';
-import Paragraph from '../atoms/Paragraph';
 
 const UniversityCourses = ({ university }) => {
   const [loading, setLoading] = useState(true);
@@ -36,15 +35,30 @@ const UniversityCourses = ({ university }) => {
         setError(null);
         
         // Fetch courses for this university
-        const coursesResponse = await fetch(`/api/internal/course?university_id=${university.id}`);
+        const coursesResponse = await fetch(`/api/frontend/getcourses/${university.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store',
+        });
         if (!coursesResponse.ok) {
-          throw new Error('Failed to fetch courses');
+          const data = await coursesResponse.json();
+
+          alert(data.message)
+          return;
         }
         const coursesData = await coursesResponse.json();
         const courses = coursesData.data || [];
         
         // Fetch all subjects
-        const subjectsResponse = await fetch('/api/internal/subject');
+        const subjectsResponse = await fetch('/api/frontend/getsubject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store',
+        });
         if (!subjectsResponse.ok) {
           throw new Error('Failed to fetch subjects');
         }

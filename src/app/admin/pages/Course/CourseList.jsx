@@ -12,7 +12,6 @@ const AddCourse = dynamic(() => import('./AddCourse'), { ssr: false });
 
 const CourseList = () => {
   const [courses, setCourses] = useState([]);
-  const [universities, setUniversities] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -22,6 +21,7 @@ const CourseList = () => {
   const [itemsPerPage] = useState(15);
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [levels, setLevels] = useState([]);
   
   // Filter states
   const [startDate, setStartDate] = useState('');
@@ -61,46 +61,42 @@ const CourseList = () => {
 
   // Fetch universities and subjects on mount
   useEffect(() => {
-    fetchUniversities();
-    fetchSubjects();
-  }, []);
 
+    const fetchdata = async () => {
+      const [levels, subjects] = await Promise.all([
+        fetch('/api/frontend/getpostlevel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }),
+        fetch('/api/frontend/getsubject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }),
+      ]);
+
+      if(!levels.ok || !subjects.ok) throw new Error('Failed to fetch data')
+
+      const levelData = await levels.json();
+      const subjectsData = await subjects.json();
+
+      setLevels(levelData.data);
+      setSubjects(subjectsData.data);
+
+    }
+
+    fetchdata()
+
+  }, [])
+ 
   // Fetch courses when page or applied filters change
   useEffect(() => {
     fetchCourses();
   }, [currentPage, appliedSearchTerm, appliedStartDate, appliedEndDate, appliedQualificationFilter, appliedPopularFilter, appliedSubjectFilter]);
 
-  async function fetchUniversities() {
-    try {
-      const res = await fetch('/api/internal/university');
-      const data = await res.json();
-      if (data.success) {
-        setUniversities(data.data || []);
-      } else {
-        setUniversities([]);
-        console.warn('Failed to fetch universities:', data.message);
-      }
-    } catch (err) {
-      console.error('Failed to fetch universities:', err);
-      setUniversities([]);
-    }
-  }
-
-  async function fetchSubjects() {
-    try {
-      const res = await fetch('/api/internal/subject');
-      const data = await res.json();
-      if (data.success) {
-        setSubjects(data.data || []);
-      } else {
-        setSubjects([]);
-        console.warn('Failed to fetch subjects:', data.message);
-      }
-    } catch (err) {
-      console.error('Failed to fetch subjects:', err);
-      setSubjects([]);
-    }
-  }
 
   async function fetchCourses() {
     try {
@@ -129,16 +125,7 @@ const CourseList = () => {
         params.append('subject', appliedSubjectFilter);
       }
 
-      console.log('=== API REQUEST DEBUG ===');
-      console.log('API URL:', `/api/internal/course?${params.toString()}`);
-      console.log('Applied Filters:', {
-        search: appliedSearchTerm,
-        start_date: appliedStartDate,
-        end_date: appliedEndDate,
-        qualification: appliedQualificationFilter,
-        popular: appliedPopularFilter,
-        subject: appliedSubjectFilter
-      });
+      
 
       const res = await fetch(`/api/internal/course?${params.toString()}`);
       const data = await res.json();
@@ -147,12 +134,7 @@ const CourseList = () => {
         setCourses(data.data);
         // Use the correct pagination field from the API response
         setTotalItems(data.pagination?.totalItems || data.total || data.data.length);
-        console.log('Course API response:', {
-          success: data.success,
-          coursesCount: data.data.length,
-          totalItems: data.pagination?.totalItems || data.total || data.data.length,
-          pagination: data.pagination
-        });
+        
       } else {
         setCourses([]);
         setTotalItems(0);
@@ -172,10 +154,6 @@ const CourseList = () => {
       setFetchingCourses(false);
     }
   }
-
-  const refreshCourses = async () => {
-    await fetchCourses();
-  };
 
   const handleSearch = () => {
     console.log('=== FRONTEND FILTER DEBUG ===');
@@ -227,8 +205,6 @@ const CourseList = () => {
       if (appliedQualificationFilter) params.append('qualification', appliedQualificationFilter);
       if (appliedPopularFilter) params.append('popular', appliedPopularFilter);
       if (appliedSubjectFilter) params.append('subject', appliedSubjectFilter);
-
-      console.log('Loading all courses with params:', params.toString());
       
       const res = await fetch(`/api/internal/course?${params.toString()}`);
       const data = await res.json();
@@ -237,7 +213,6 @@ const CourseList = () => {
         setCourses(data.data);
         setTotalItems(data.data.length); // Update total to show all loaded
         setAllCoursesLoaded(true);
-        console.log('Loaded all courses:', data.data.length);
         
         Swal.fire({
           icon: 'success',
@@ -282,6 +257,8 @@ const CourseList = () => {
         cancelButtonText: 'Cancel'
       });
 
+      console.log("Course ID", id)
+
       if (result.isConfirmed) {
         const res = await fetch(`/api/internal/course/${id}`, {
           method: 'DELETE'
@@ -313,7 +290,7 @@ const CourseList = () => {
 
   const handleTogglePopular = async (course) => {
     try {
-      const res = await fetch(`/api/internal/course/${course.id}`, {
+      const res = await fetch(`/api/internal/new/togglepopular/${course.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ popular: !course.popular })
@@ -391,6 +368,9 @@ const CourseList = () => {
   };
 
   return (
+    <>
+    <title>List of all Courses - University Page</title>
+    <meta name="description" content="List of all Courses - University Page" />
     <div className="space-y-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Course Management</h1>
@@ -463,12 +443,12 @@ const CourseList = () => {
                 onChange={(e) => setQualificationFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0B6D76] focus:border-transparent"
               >
-                <option value="">All Qualifications</option>
-                <option value="Bachelor">Bachelor</option>
-                <option value="Master">Master</option>
-                <option value="PhD">PhD</option>
-                <option value="Diploma">Diploma</option>
-                <option value="Certificate">Certificate</option>
+                <option value="">Select Qualification</option>
+                {levels.map((level) => (
+                  <option key={level.id} value={level.id}>
+                    {level.title}
+                  </option>
+                ))}
               </select>
             </div>
             
@@ -620,7 +600,7 @@ const CourseList = () => {
                       <td className="px-6 py-4 text-gray-600">
                         {course.subject_name || 'Not Available'}
                       </td>
-                      <td className="px-6 py-4 text-gray-600">{course.qualification_name || course.qualification || '-'}</td>
+                      <td className="px-6 py-4 text-gray-600">{course.qualification || course.qualification || '-'}</td>
                       <td className="px-6 py-4 text-center">
                         <label className="inline-flex items-center cursor-pointer">
                           <input
@@ -738,6 +718,7 @@ const CourseList = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

@@ -35,9 +35,10 @@ interface ApplicationData {
 interface Step {
   key: string;
   label: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
   description: string;
 }
+
 
 const steps: Step[] = [
   { 
@@ -114,7 +115,7 @@ const TrackApplication = () => {
 
     try {
       const response = await fetch(
-        `/api/internal/track-application?name=${encodeURIComponent(name.trim())}&passportNumber=${encodeURIComponent(passportNumber.trim())}`,
+        `/api/frontend/track-application?name=${encodeURIComponent(name.trim())}&passportNumber=${encodeURIComponent(passportNumber.trim())}`,
         {
           method: 'GET',
           headers: {
@@ -157,12 +158,7 @@ const TrackApplication = () => {
 
   const currentStepIndex = getCurrentStepIndex();
 
-  // Handle key press for form submission
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleTrack();
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -201,9 +197,6 @@ const TrackApplication = () => {
                     placeholder="Enter your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    className="border-gray-300 focus:border-[#0B6D76] focus:ring-[#0B6D76]"
-                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -215,11 +208,7 @@ const TrackApplication = () => {
                     icon={<FaEnvelope className="text-[#0B6D76]" />}
                     placeholder="Enter passport number"
                     value={passportNumber}
-                    onChange={(e) => setPassportNumber(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    className="border-gray-300 focus:border-[#0B6D76] focus:ring-[#0B6D76]"
-                    disabled={loading}
-                  />
+                    onChange={(e) => setPassportNumber(e.target.value)}                  />
                 </div>
               </div>
               <Button
@@ -258,7 +247,7 @@ const TrackApplication = () => {
               <Heading level={2} className="text-2xl md:text-3xl font-bold text-[#2E3B5A] mb-2">
                 Application Overview
               </Heading>
-              <p className="text-gray-600">Here's your current application status</p>
+              <p className="text-gray-600">Here&apos;s your current application status</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

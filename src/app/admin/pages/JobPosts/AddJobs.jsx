@@ -5,6 +5,7 @@ import { Save, X, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useJobs } from './JobContext';
+import Swal from 'sweetalert2';
 
 const SummernoteEditor = dynamic(() => import('../../../components/organisms/SummernoteEditor'), { 
   ssr: false,
@@ -36,7 +37,6 @@ const initialForm = {
 
 const AddJobs = () => {
   const router = useRouter();
-  const { addJob } = useJobs();
   const [form, setForm] = useState(initialForm);
   const [newSkill, setNewSkill] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,22 +85,54 @@ const AddJobs = () => {
     }
     
     setIsSubmitting(true);
+
     try {
-      const result = await addJob(form);
-      if (result) {
-        alert('Job posted successfully!');
-        setForm(initialForm);
-        setActiveTab('BASIC INFO');
-        setNewSkill('');
-      } else {
-        alert('Failed to submit job. Please try again.');
+      const response = await fetch("/api/internal/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      
+      if (!response.ok) {
+        
+        const data = response.json();
+
+        Swal.fire({
+          title: 'Error',
+          text: data.message,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        })
+
+        return;
       }
+      
+      setForm(initialForm);
+      setActiveTab('BASIC INFO');
+      setNewSkill('');
+
+      Swal.fire({
+        title: 'Success',
+        text: 'Job added successfully',
+        icon: 'success',
+        confirmButtonText: 'OK'
+      }).then(() => {
+        router.push('/admin/job-posts');
+      })
+
     } catch (error) {
-      console.error('Failed to submit job:', error);
-      alert('Failed to submit job. Please try again.');
+      console.error("Error adding job:", error);
+      Swal.fire({
+        title: 'Error',
+        text: error,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      })
+      return false;
     } finally {
       setIsSubmitting(false);
     }
+
   };
 
   const addSkill = () => {
@@ -302,6 +334,8 @@ const AddJobs = () => {
   };
 
   return (
+    <>
+    <title>Add New Job Post - University Page</title>
     <form onSubmit={handleSubmit} className="min-h-screen flex flex-col md:flex-row bg-gray-100">
       {/* Mobile Menu Button */}
       <div className="md:hidden bg-white p-4 flex justify-between items-center border-b">
@@ -449,6 +483,7 @@ const AddJobs = () => {
         }
       `}</style>
     </form>
+    </>
   );
 };
 

@@ -1,15 +1,46 @@
 'use client';
 
-import { useJobs } from "../../admin/pages/JobPosts/JobContext";
+import { useEffect, useState } from "react";
 import Container from "../atoms/Container";
 import Heading from "../atoms/Heading";
 import { JobOpportunitiesfirst } from "../molecules/Job-Opportunitiesfirst";
+import Swal from "sweetalert2";
 
 function JobOpportunitiesorgan() {
-  const { jobs, loading } = useJobs();
 
-  // ✅ Only show jobs marked as 'active'
-  const activeJobs = (jobs || []).filter(job => job.active);
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await fetch("/api/frontend/jobs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch jobs");
+        }
+
+        const data = await response.json();
+        setJobs(data.data);
+        setLoading(false);
+
+      } catch (error) {
+        console.error("Error fetching jobs:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: error.message,
+        })
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, [])
 
   return (
     <div className="min-h-screen bg-white">
@@ -23,11 +54,11 @@ function JobOpportunitiesorgan() {
 
           {loading ? (
             <div className="text-center text-gray-500">Loading jobs...</div>
-          ) : activeJobs.length === 0 ? (
+          ) : jobs.length === 0 ? (
             <div className="text-center text-gray-500">No jobs found.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-[60px] mx-auto">
-              {activeJobs.map((job, index) => (
+              {jobs.map((job, index) => (
                 <JobOpportunitiesfirst
                   key={job.id || index}
                   id={job.id}

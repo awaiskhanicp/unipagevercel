@@ -98,48 +98,14 @@ function useUniversitiessidebar() {
   const fetchQualifications = useCallback(async () => {
     setQualificationsLoading(true);
     try {
-      const response = await fetch('/api/internal/add_post_level');
+      const response = await fetch('/api/frontend/getpostlevel', 
+        {
+          method: "POST"
+        }
+      );
       const data = await response.json();
       
-      console.log('🎓 Add Post Level API Response:', data);
-      
-      if (data.success && data.data && Array.isArray(data.data)) {
-        console.log('🎓 Post levels loaded from API:', data.data);
-        
-        // Extract titles from the posts data and filter for qualification-related content
-        const qualificationTitles = data.data
-          .filter(post => post.title && post.title.trim().length > 0)
-          .map(post => post.title)
-          .filter(title => {
-            const lowerTitle = title.toLowerCase();
-            // Filter for qualification-related titles - make it more inclusive
-            return lowerTitle.includes('bachelor') || 
-                   lowerTitle.includes('master') || 
-                   lowerTitle.includes('phd') || 
-                   lowerTitle.includes('doctorate') || 
-                   lowerTitle.includes('diploma') || 
-                   lowerTitle.includes('certificate') || 
-                   lowerTitle.includes('foundation') || 
-                   lowerTitle.includes('associate') ||
-                   lowerTitle.includes('level') ||
-                   lowerTitle.includes('matric') ||
-                   lowerTitle.includes('intermediate') ||
-                   lowerTitle.includes('degree') ||
-                   lowerTitle.includes('program') ||
-                   lowerTitle.includes('course');
-          });
-        
-        console.log('🎓 Filtered qualification titles:', qualificationTitles);
-        setQualificationOptions(qualificationTitles);
-      } else {
-        console.error('🎓 Invalid add_post_level data structure:', data);
-        // Fallback to static qualifications if API fails
-        const fallbackQualifications = [
-          'Bachelor', 'Master', 'PhD', 'Diploma', 'Certificate', 'Foundation', 'Associate'
-        ];
-        setQualificationOptions(fallbackQualifications);
-        console.log('🎓 Using fallback qualifications:', fallbackQualifications);
-      }
+      setQualificationOptions(data.data)
       
     } catch (error) {
       console.error('Error fetching add_post_level data:', error);
@@ -217,16 +183,16 @@ function useUniversitiessidebar() {
       
       // Build API URL based on type filter - Database level filtering
       if (filterType === 'university') {
-        apiUrl = `/api/internal/university?${params.toString()}`;
+        apiUrl = `/api/frontend/universityfilter?${params.toString()}`;
       } else if (filterType === 'course') {
-        apiUrl = `/api/internal/course?${params.toString()}`;
+        apiUrl = `/api/frontend/coursefilter?${params.toString()}`;
       } else if (filterType === 'article') {
         apiUrl = `/api/internal/blogs?${params.toString()}`;
       } else if (filterType === 'guide') {
         apiUrl = `/api/internal/guides?${params.toString()}`;
       } else {
         // Default to university if no type specified
-        apiUrl = `/api/internal/university?${params.toString()}`;
+        apiUrl = `/api/frontend/universityfilter?${params.toString()}`;
       }
       
       console.log('🔍 Fetching page data with database-level filters:', { 

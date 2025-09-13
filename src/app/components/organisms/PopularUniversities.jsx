@@ -7,27 +7,52 @@ import Paragraph from '../atoms/Paragraph';
 import { useEffect, useState } from 'react';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
 import { useWishlist } from '../../context/WishlistContext';
+import Swal from 'sweetalert2';
 
 const PopularUniversities = () => {
   const [universities, setUniversities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { toggleWishlist, isWishlisted } = useWishlist();
 
   useEffect(() => {
-    fetch('/api/internal/university', { cache: 'no-store' })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch universities');
-        return res.json();
-      })
-      .then(data => {
-        // Filter for popular universities and limit to 3
-        const popular = (data.data || []).filter(u => u.popular).slice(0, 3);
-        setUniversities(popular);
-        console.log(popular, "university page for photo check")
-      })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+
+    const fetchUnivertities = async() =>{
+      try{
+
+        setLoading(true);
+
+        const response = await fetch('/api/frontend/getuniversities', { 
+          method: 'POST',
+          cache: 'no-store' 
+        });
+
+        if(!response.ok){
+          const data = await response.json();
+
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: data.message || 'An error occurred',
+          });
+
+          return;
+
+        }
+
+        const data = await response.json();
+
+        setUniversities(data.data);
+      } catch (error) {
+        setError(error.message);
+        setLoading(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUnivertities()
+
   }, []);
 
   return (

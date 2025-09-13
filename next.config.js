@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
- 
   images: {
     remotePatterns: [
       {
@@ -30,8 +29,18 @@ const nextConfig = {
         hostname: 'randomuser.me',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.pexels.com',
+        pathname: '/**',   
+      },
+      {
+        protocol: 'https',
+        hostname: 'flagcdn.com',
+        pathname: '/**',  // ✅ allows https://flagcdn.com/w320/us.png
+      },
     ],
-     domains: [
+    domains: [
       'unipage-website.s3.eu-north-1.amazonaws.com',
       'universitiespage.com', // filemanager domain
       'cdn.example.com',      // agar koi extra CDN use hota hai

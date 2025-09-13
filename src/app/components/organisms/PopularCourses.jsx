@@ -22,7 +22,9 @@ const PopularCourses = () => {
 
   useEffect(() => {
     // Fetch only 3 courses for the home page to improve performance
-    fetch('/api/internal/course?limit=3', { cache: 'no-store' })
+    fetch('/api/frontend/limitedcourses', { 
+      method: "POST",
+      cache: 'no-store' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch courses');
         return res.json();

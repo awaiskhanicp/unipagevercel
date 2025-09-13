@@ -1,7 +1,6 @@
 import Container from "../../components/atoms/Container";
 import Heading from "../../components/atoms/Heading";
 import JobOpportunitiesorgan from "../../components/organisms/Job-Opportunitiesorgan";
-import Paragraph from "../../components/atoms/Paragraph";
 import UniversityCard from "../../components/atoms/UniversityCard";
 
 function JobOpportunities() {

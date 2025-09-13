@@ -25,7 +25,7 @@ const CourseDetails = () => {
     if (!courseData) return;
 
     const courseName = courseData.title || courseData.name || 'Course';
-    const universityName = courseData.university_info?.name || courseData.university || 'University';
+    const universityName = courseData.university_name || courseData.university || 'University';
     const location = courseData.location || '';
     const duration = courseData.duration || '';
     const tuitionFees = courseData.tuition_fees || courseData.fees || '';
@@ -168,25 +168,7 @@ const CourseDetails = () => {
     console.log('🔍 University alternate email:', item?.university_alternate_email);
     console.log('🔍 University name:', item?.university_name);
     console.log('🔍 University:', item?.university);
-
-    // Check if user is logged in or collect guest information
-    let userInfo = null;
-    
-    // Try to get user info from session/localStorage
-    try {
-      const session = await fetch('/api/auth/session');
-      const sessionData = await session.json();
-      
-      if (sessionData?.user) {
-        userInfo = {
-          name: sessionData.user.name || 'Unknown User',
-          phone: sessionData.user.phone || 'Not provided',
-          email: sessionData.user.email || 'No email'
-        };
-      }
-    } catch (error) {
-      console.log('No active session found');
-    }
+  
 
     // If no user info, collect guest information
     if (!userInfo) {
@@ -368,17 +350,19 @@ const CourseDetails = () => {
   useEffect(() => {
     if (!slug) return;
     const id = Number(slug);
-    fetch(`/api/internal/course/${id}`)
+    fetch(`/api/frontend/getcoursedetails/${id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
       .then(res => {
         if (!res.ok) throw new Error('Course not found');
         return res.json();
       })
       .then(data => {
-        console.log('🔍 Course API Response:', data);
-        console.log('🔍 Course Data:', data.data);
-        console.log('🔍 University Info:', data.data?.university_info);
-        console.log('🔍 University Alternate Email:', data.data?.university_alternate_email);
         setCourse(data.data);
+        setRelatedCourses(data.relatedcourse || []);
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
@@ -390,13 +374,6 @@ const CourseDetails = () => {
       updateMetaTags(course);
     }
   }, [course]); // Run when course data changes
-
-  // Optionally fetch related courses
-  useEffect(() => {
-    fetch('/api/internal/course?page=1&limit=2')
-      .then(res => res.ok ? res.json() : { data: [] })
-      .then(data => setRelatedCourses(data.data || []));
-  }, []);
 
   if (loading) {
     return <Container><div className="text-center py-20">Loading...</div></Container>;
@@ -454,20 +431,20 @@ const CourseDetails = () => {
             {/* LEFT SIDE */}
             <div className="image-session bg-[#E7F1F2] w-full md:w-[45%] p-6 rounded-lg relative shadow-md">
               {/* DISCOUNT TAG */}
-              {course?.country_info?.consultation_fee_discount ? (
-  <div className="absolute top-3 right-3 bg-teal-700 text-white text-sm font-semibold px-3 py-1 rounded-full">
-    {course.country_info.consultation_fee_discount}% OFF
-  </div>
-) : null}
+              {course?.consultation_fee_discount ? (
+                <div className="absolute top-3 right-3 bg-teal-700 text-white text-sm font-semibold px-3 py-1 rounded-full">
+                  {course?.consultation_fee_discount}% OFF
+                </div>
+              ) : null}
               {/* LOGO + TEXT */}
               <div className="box-session flex items-center gap-6 mb-6">
                 <div className="img ">
-                  <img src={course.universityLogo && course.universityLogo.trim() !== '' ? course.universityLogo : '/assets/dtb1.png'} alt={course.university || 'university logo'} className="" />
+                  <img src={course.universityLogo1 && course.universityLogo.trim() !== '' ? course.universityLogo : '/assets/dtb1.png'} alt={course.university || 'university logo'} className="" />
                 </div>
                 <div className="text">
                   <Heading level={5}>
-  {course.university_info?.name || 'Unknown University'}
-</Heading>
+                    {course.university_name || 'Unknown University'}
+                  </Heading>
                   <Heading level={6} className="text-gray-600">{course.location}</Heading>
           <div className="flex gap-[10px] mt-4 justify-center">
             {[
@@ -504,20 +481,18 @@ const CourseDetails = () => {
           
           <div className="">
             <div className=" text-center pb-[20px]"><Heading level={3}>Other Related Courses</Heading></div>
-<div className="grid lg:grid-cols-3 grid-cols-1 md:grid-cols-2 gap-8 px-4 py-8">
-  {relatedCourses.slice(0, 3).map((related) => (
-    <CourseCard
-      key={related.id}
-      id={related.id}
-      image={related.image}
-      title={related.title || related.name}
-      university={related.university}
-      location={related.location}
-      type={related.qualification}
-      discount={related.discount}
-    />
-  ))}
-</div>
+            <div className="grid lg:grid-cols-3 grid-cols-1 md:grid-cols-2 gap-8 px-4 py-8">
+              {relatedCourses.slice(0, 3).map((related) => (
+                <CourseCard
+                  key={related.id}
+                  id={related.id}
+                  image={related.image}
+                  title={related.title || related.name}
+                  university={related.university_name}
+                  location={related.location}
+                />
+              ))}
+            </div>
             <div className="flex justify-center"><Button>view More Courses</Button></div>
           </div>
         </div>
@@ -527,400 +502,3 @@ const CourseDetails = () => {
 };
 
 export default CourseDetails;
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 'use client';
-// import { useEffect, useState } from 'react';
-// import { useParams } from 'next/navigation';
-// import Image from 'next/image';
-// import Swal from 'sweetalert2';
-// import Link from 'next/link';
-// import { IoMdCheckmarkCircleOutline } from 'react-icons/io';
-// import { FaFacebook, FaTwitter, FaWhatsapp, FaLinkedin } from "react-icons/fa";
-// import Button from '../../../../app/components/atoms/Button';
-// import Container from '../../../../app/components/atoms/Container';
-// import Heading from '../../../../app/components/atoms/Heading';
-// import CourseCard from '../../../../app/components/molecules/CourseCard';
-// import CourseDetailForm from '../../../../app/components/organisms/CourseDetailForm';
-// import { SocialIcons } from '../../../components/molecules/SocialIcons';
-
-// const CourseDetails = () => {
-//   const { slug } = useParams();
-//   const [course, setCourse] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-//   const [relatedCourses, setRelatedCourses] = useState([]);
-
-
-//   const handleRequestInfo = async (item) => {
-//     console.log('🔍 handleRequestInfo called with item:', item);
-//     console.log('🔍 Item keys:', Object.keys(item));
-//     console.log('🔍 University info:', item?.university_info);
-//     console.log('🔍 University alternate email:', item?.university_alternate_email);
-//     console.log('🔍 University name:', item?.university_name);
-//     console.log('🔍 University:', item?.university);
-
-//     // Check if user is logged in or collect guest information
-//     let userInfo = null;
-    
-//     // Try to get user info from session/localStorage
-//     try {
-//       const session = await fetch('/api/auth/session');
-//       const sessionData = await session.json();
-      
-//       if (sessionData?.user) {
-//         userInfo = {
-//           name: sessionData.user.name || 'Unknown User',
-//           phone: sessionData.user.phone || 'Not provided',
-//           email: sessionData.user.email || 'No email'
-//         };
-//       }
-//     } catch (error) {
-//       console.log('No active session found');
-//     }
-
-//     // If no user info, collect guest information
-//     if (!userInfo) {
-//       const { value: formValues } = await Swal.fire({
-//         title: 'Request Course Information',
-//         html: `
-//           <div class="text-left">
-//             <p class="mb-3">Please provide your contact information to receive admission details for:</p>
-//             <p class="font-bold text-blue-600 mb-4">${item.title || item.name || 'This Course'}</p>
-            
-//             <div class="mb-3">
-//               <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-//               <input id="swal-input1" class="swal2-input" placeholder="Enter your full name">
-//             </div>
-            
-//             <div class="mb-3">
-//               <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-//               <input id="swal-input2" class="swal2-input" type="email" placeholder="Enter your email">
-//             </div>
-            
-//             <div class="mb-3">
-//               <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-//               <input id="swal-input3" class="swal2-input" placeholder="Enter your phone number">
-//             </div>
-//           </div>
-//         `,
-//         focusConfirm: false,
-//         showCancelButton: true,
-//         confirmButtonText: 'Send Request',
-//         cancelButtonText: 'Cancel',
-//         preConfirm: () => {
-//           const name = document.getElementById('swal-input1').value;
-//           const email = document.getElementById('swal-input2').value;
-//           const phone = document.getElementById('swal-input3').value;
-          
-//           if (!name || !email) {
-//             Swal.showValidationMessage('Name and Email are required');
-//             return false;
-//           }
-          
-//           if (!email.includes('@')) {
-//             Swal.showValidationMessage('Please enter a valid email address');
-//             return false;
-//           }
-          
-//           return { name, email, phone: phone || 'Not provided' };
-//         }
-//       });
-
-//       if (formValues) {
-//         userInfo = formValues;
-//       } else {
-//         return; // User cancelled
-//       }
-//     }
-
-//     // Extract course information properly with better fallbacks
-//     const courseName = item.title || 
-//                       item.name || 
-//                       'Course';
-    
-//     const universityName = item.university_name || 
-//                           item.university || 
-//                           item.university_info?.name ||
-//                           'University';
-
-//     // Check multiple possible email fields
-//     const universityEmail = item.university_alternate_email || 
-//                            item.university_info?.alternate_email ||
-//                            item.university_email ||
-//                            item.email;
-
-//     console.log('🔍 Email check:', {
-//       university_alternate_email: item.university_alternate_email,
-//       university_info_alternate_email: item.university_info?.alternate_email,
-//       university_email: item.university_email,
-//       email: item.email,
-//       final_email: universityEmail
-//     });
-
-//     // Check if we have university email information
-//     if (!universityEmail) {
-//       Swal.fire({
-//         title: 'University Email Not Found',
-//         text: `Sorry, we couldn't find an email address for ${universityName}. Please contact support or try another course.`,
-//         icon: 'warning',
-//         confirmButtonText: 'OK',
-//       });
-//       return;
-//     }
-
-//     console.log('🔍 Extracted course info:', { 
-//       name: courseName, 
-//       university: universityName, 
-//       university_email: universityEmail,
-//       item: item 
-//     });
-
-//     const result = await Swal.fire({
-//       title: `Send Course Information Request?`,
-//       text: `We'll send your request for: ${courseName} at ${universityName}`,
-//       icon: 'question',
-//       showCancelButton: true,
-//       confirmButtonText: 'Yes, Send Request',
-//       cancelButtonText: 'Cancel',
-//     });
-
-//     if (result.isConfirmed) {
-//       Swal.fire({
-//         title: 'Sending request...',
-//         allowOutsideClick: false,
-//         didOpen: () => Swal.showLoading(),
-//       });
-
-//       try {
-//         console.log('📤 Sending request to API with data:', { 
-//           item: {
-//             ...item,
-//             course_name: courseName,
-//             university_name: universityName,
-//             university_alternate_email: universityEmail
-//           }, 
-//           userInfo 
-//         });
-
-//         const res = await fetch('/api/internal/request-info', {
-//           method: 'POST',
-//           headers: { 'Content-Type': 'application/json' },
-//           body: JSON.stringify({ 
-//             item: {
-//               ...item,
-//               course_name: courseName,
-//               university_name: universityName,
-//               university_alternate_email: universityEmail
-//             }, 
-//             userInfo 
-//           }),
-//         });
-
-//         console.log('📥 API response status:', res.status);
-//         const data = await res.json();
-//         console.log('📥 API response data:', data);
-
-//         if (res.status === 401) {
-//           Swal.fire({
-//             title: 'Unauthorized',
-//             text: data.error || 'Please login as a student or consultant to request info.',
-//             icon: 'warning',
-//           });
-//           return;
-//         }
-
-//         if (data.success) {
-//           Swal.fire({
-//             title: 'Request Sent Successfully! 🎉',
-//             text: `Your course information request has been sent. The university will contact you within 24-48 hours.`,
-//             icon: 'success',
-//             confirmButtonText: 'Great!',
-//           });
-//         } else {
-//           console.error('❌ API returned error:', data.error);
-//           Swal.fire({
-//             title: 'Error',
-//             text: data.error || 'Failed to send request. Please try again.',
-//             icon: 'error',
-//           });
-//         }
-//       } catch (err) {
-//         console.error('❌ Network/JS error sending request:', err);
-//         Swal.fire({
-//           title: 'Error',
-//           text: 'Something went wrong while sending the request. Please try again.',
-//           icon: 'error',
-//         });
-//       }
-//     }
-//   };
-
-
-
-//   useEffect(() => {
-//     if (!slug) return;
-//     const id = Number(slug);
-//     fetch(`/api/internal/course/${id}`)
-//       .then(res => {
-//         if (!res.ok) throw new Error('Course not found');
-//         return res.json();
-//       })
-//       .then(data => {
-//         console.log('🔍 Course API Response:', data);
-//         console.log('🔍 Course Data:', data.data);
-//         console.log('🔍 University Info:', data.data?.university_info);
-//         console.log('🔍 University Alternate Email:', data.data?.university_alternate_email);
-//         setCourse(data.data);
-//       })
-//       .catch(err => setError(err.message))
-//       .finally(() => setLoading(false));
-//   }, [slug]);
-
-//   // Optionally fetch related courses
-//   useEffect(() => {
-//     fetch('/api/internal/course?page=1&limit=2')
-//       .then(res => res.ok ? res.json() : { data: [] })
-//       .then(data => setRelatedCourses(data.data || []));
-//   }, []);
-
-//   if (loading) {
-//     return <Container><div className="text-center py-20">Loading...</div></Container>;
-//   }
-
-//   if (error || !course) {
-//     return (
-//       <Container>
-//         <div className="min-h-screen flex flex-col items-center justify-center">
-//           <h1 className="text-2xl font-bold mb-4">Course not found</h1>
-//           <Link href="/"><Button>Go Back Home</Button></Link>
-//         </div>
-//       </Container>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen">
-//       <section className="relative md:h-[75vh] sm:h-[90vh] h-[90vh] flex items-center justify-center overflow-hidden">
-//         <img
-//           src="/assets/detail.png"
-//           alt="Hero Background"
-//           className="absolute top-0 left-0 w-full h-full object-center bg-cover object-top z-0"
-//         />
-//         {/* Overlay */}
-//         <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
-//         {/* Gradient Overlay */}
-//         <div className="absolute inset-0 z-10 bg-gradient-to-b from-[rgba(0,0,0,0.1)] to-[rgba(0,0,0,0.9)]"></div>
-//         {/* Content */}
-//         <div className="relative z-20 text-center px-4 max-w-6xl mx-auto pb-12">
-//           <Heading level={1}>
-//             <div className="text-white md:pt-[0px] sm:pt-[80px] pt-[80px]">{course.title || course.name}</div>
-//           </Heading>
-          
-//           {/* Social Media Sharing Section - Same as Articles Page */}
-
-          
-//           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-[fadeIn_1s_ease-in_0.4s] mt-6">
-//         <div onClick={() => handleRequestInfo(course)}>
-//                <Button size="lg" className=" text-white text-lg px-10 py-4 shadow-xl hover:shadow-2xl">
-//                 Admission Request
-//               </Button>
-//           </div>   
-//             <Link href={"/freeconsulation"}>
-//               <Button size="lg" className=" text-white text-lg px-10 py-4 shadow-xl hover:shadow-2xl">
-//                 Free Consultation
-//               </Button>
-//             </Link>
-//           </div>
-//         </div>
-//       </section>
-//       <Container>
-//         <div className="complete-page banner-bottom-space bottom-session-space complete-page-spaceing">
-//           <div className="main-session flex justify-between items-center gap-6 flex-wrap md:flex-nowrap">
-//             {/* LEFT SIDE */}
-//             <div className="image-session bg-[#E7F1F2] w-full md:w-[45%] p-6 rounded-lg relative shadow-md">
-//               {/* DISCOUNT TAG */}
-//               {course?.country_info?.consultation_fee_discount ? (
-//   <div className="absolute top-3 right-3 bg-teal-700 text-white text-sm font-semibold px-3 py-1 rounded-full">
-//     {course.country_info.consultation_fee_discount}% OFF
-//   </div>
-// ) : null}
-//               {/* LOGO + TEXT */}
-//               <div className="box-session flex items-center gap-6 mb-6">
-//                 <div className="img ">
-//                   <img src={course.universityLogo && course.universityLogo.trim() !== '' ? course.universityLogo : '/assets/dtb1.png'} alt={course.university || 'university logo'} className="" />
-//                 </div>
-//                 <div className="text">
-//                   <Heading level={5}>
-//   {course.university_info?.name || 'Unknown University'}
-// </Heading>
-//                   <Heading level={6} className="text-gray-600">{course.location}</Heading>
-//           <div className="flex gap-[10px] mt-4 justify-center">
-//             {[
-//               { Icon: FaFacebook, name: "Facebook", url: (u, t) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}` },
-//               { Icon: FaTwitter, name: "Twitter", url: (u, t) => `https://twitter.com/intent/tweet?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}` },
-//               { Icon: FaWhatsapp, name: "WhatsApp", url: (u, t) => `https://api.whatsapp.com/send?text=${encodeURIComponent(t + " " + u)}` },
-//             ].map(({ Icon, name, url }, i) => (
-//               <a
-//                 key={i}
-//                 className="flex items-center text-[14px] gap-[10px] hover:opacity-80 transition-opacity"
-//                 href={url(window.location.href, course.title || course.name)}
-//                 target="_blank"
-//                 rel="noopener noreferrer"
-//                 aria-label={`Share on ${name}`}
-//               >
-//                 <div className="bg-[var(--brand-color)] w-[40px] h-[40px] rounded-full flex justify-center items-center text-white text-[16px]">
-//                   <Icon />
-//                 </div>
-//               </a>
-//             ))}
-//           </div>
-//                 </div>
-//               </div>
-              
-//             </div>
-//             {/* RIGHT SIDE IMAGE */}
-//             <div className="">
-//               <img src={course.campusImage && course.campusImage.trim() !== '' ? course.campusImage : '/assets/visit.png'} alt="campus" className="w-full h-full object-cover" />
-//             </div>
-//           </div>
-//           <div className="">
-//             <CourseDetailForm course={course} />
-//           </div>
-          
-//           <div className="">
-//             <div className=" text-center pb-[20px]"><Heading level={3}>Other Related Courses</Heading></div>
-// <div className="grid lg:grid-cols-3 grid-cols-1 md:grid-cols-2 gap-8 px-4 py-8">
-//   {relatedCourses.slice(0, 3).map((related) => (
-//     <CourseCard
-//       key={related.id}
-//       id={related.id}
-//       image={related.image}
-//       title={related.title || related.name}
-//       university={related.university}
-//       location={related.location}
-//       type={related.qualification}
-//       discount={related.discount}
-//     />
-//   ))}
-// </div>
-//             <div className="flex justify-center"><Button>view More Courses</Button></div>
-//           </div>
-//         </div>
-//       </Container>
-//     </div>
-//   );
-// };
-
-// export default CourseDetails;

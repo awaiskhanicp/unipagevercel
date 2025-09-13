@@ -4,7 +4,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Pagination from '../../components/Pagination';
 import Swal from 'sweetalert2';
@@ -17,15 +16,41 @@ const SummernoteEditor = dynamic(() => import('../../../components/organisms/Sum
 const editTabs = [
   'GENERAL',
   'MORE DETAIL',
+  'IMAGES',
   'ABOUT UNIVERSITY',
   'GUIDE',
   'ACCOMMODATION',
   'EXPANSE',
 ];
 
+// Helper function to safely parse JSON
+const safeParse = (str) => {
+  try {
+    return typeof str === 'object' ? str : JSON.parse(str || '[]');
+  } catch {
+    return [];
+  }
+};
+
 export default function UniversityList() {
   const [universities, setUniversities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState({
+    logo: null,
+    feature_image: null,
+  });
+  // Reviews
+  const [reviews, setReviews] = useState([
+    {
+      rating: 0,
+      reviewDate: '',
+      authorName: '',
+      publisherName: '',
+      reviewerName: '',
+      reviewDescription: '',
+    }
+  ]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUniversity, setEditingUniversity] = useState(null);
   const [activeEditTab, setActiveEditTab] = useState('GENERAL');
@@ -53,15 +78,11 @@ export default function UniversityList() {
     alternate_email: '',
     website: '',
     popular: false,
-    sm_question: '[]',
-    sm_answer: '[]',
     review_detail: '[]',
     logo_url: '',
     feature_image_url: '',
-    other_images_urls: '[]',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15; // Increased to show more universities per page
   
@@ -85,7 +106,6 @@ export default function UniversityList() {
   // Pagination states
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Get unique countries for filter dropdown
   const uniqueCountries = [...new Set(universities.map(uni => uni.country).filter(Boolean))];
@@ -154,6 +174,7 @@ export default function UniversityList() {
 
   // Function to apply filters when search button is clicked
   const applyFilters = () => {
+    
     setAppliedFilters({
       search: searchTerm,
       country: filterCountry,
@@ -178,30 +199,6 @@ export default function UniversityList() {
     setCurrentPage(1);
   };
 
-  // Function to load more universities if needed
-  const loadMoreUniversities = async () => {
-    if (isLoadingMore || universities.length >= totalItems) return;
-    
-    try {
-      setIsLoadingMore(true);
-      const nextPage = Math.floor(universities.length / itemsPerPage) + 1;
-      const response = await fetch(`/api/internal/university?page=${nextPage}&limit=${itemsPerPage}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          // Append new universities to existing list
-          setUniversities(prev => [...prev, ...data.data]);
-          console.log('Loaded more universities:', data.data.length, 'Total now:', universities.length + data.data.length);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading more universities:', error);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
   const handleEditClick = (university) => {
     // Helper function to safely handle JSON fields
     const safeJsonField = (field) => {
@@ -211,7 +208,19 @@ export default function UniversityList() {
       return '[]';
     };
 
+    const parsedReviews = (() => {
+      try {
+        const r = typeof university.review_detail === 'string' ? JSON.parse(university.review_detail) : (university.review_detail || []);
+        return Array.isArray(r) && r.length > 0 ? r : [{ rating: '', reviewDate: '', authorName: '', publisherName: '', reviewerName: '', reviewDescription: '' }];
+      } catch {
+        return [{ rating: '', reviewDate: '', authorName: '', publisherName: '', reviewerName: '', reviewDescription: '' }];
+      }
+    })();
+
     setEditingUniversity(university);
+
+    setReviews(parsedReviews);
+
     setEditForm({
       name: university.name || '',
       founded_in: university.founded_in || '',
@@ -223,7 +232,7 @@ export default function UniversityList() {
       agency_number: university.agency_number || '',
       total_students: university.total_students || '',
       international_student: university.international_student || '',
-      scholarship: university.scholarship || '',
+      scholarship: university.scholarship === 1 ? "Yes" : "No",
       about: university.about || '',
       guide: university.guide || '',
       expanse: university.expanse || '',
@@ -236,17 +245,13 @@ export default function UniversityList() {
       alternate_email: university.alternate_email || '',
       website: university.website || '',
       popular: university.popular || false,
-      sm_question: safeJsonField(university.sm_question),
-      sm_answer: safeJsonField(university.sm_answer),
-      review_detail: safeJsonField(university.review_detail),
-      logo_url: university.logo_url || '',
-      feature_image_url: university.feature_image_url || '',
-      other_images_urls: safeJsonField(university.other_images_urls),
+      review_detail: parsedReviews,
+      logo_url: university.logo || '',
+      feature_image_url: university.feature_image || '',
     });
     setActiveEditTab('GENERAL');
     setShowEditModal(true);
   };
-
 
 
   const handleDelete = async (id) => {
@@ -288,6 +293,115 @@ export default function UniversityList() {
     }
   };
 
+  const uploadImage = async (file, uploadType = 'university-logo') => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('uploadType', uploadType); // Add upload type for proper S3 path
+
+      const response = await fetch('/api/internal/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  };
+
+  const handleFileUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+
+      // Determine upload type based on field
+      let uploadType = 'university-logo'; // default
+      if (field === 'logo') uploadType = 'university-logo';
+      else if (field === 'feature_image') uploadType = 'university-feature';
+      
+      const imageUrl = await uploadImage(file, uploadType);
+    
+      setUploadedImages(prev => ({
+        ...prev,
+        [field]: { file, url: imageUrl }
+      }));
+      setEditForm(prev => ({
+        ...prev,
+        [`${field}_url`]: imageUrl,
+        [field]: imageUrl // <-- ensure legacy field is also set
+      }));
+
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Error',
+        text: error.message || 'Failed to upload image',
+        confirmButtonColor: '#0B6D76'
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeImage = (index, field) => {
+   
+    setUploadedImages(prev => ({
+      ...prev,
+      [field]: null
+    }));
+    setEditForm(prev => ({
+      ...prev,
+      [`${field}_url`]: ''
+    }));
+
+  };
+
+  // Review Handlers
+  const handleReviewChange = (index, field, value) => {
+    const updatedReviews = [...reviews];
+    updatedReviews[index][field] = value;
+    setReviews(updatedReviews);
+    setEditForm(prev => ({
+      ...prev,
+      review_detail: JSON.stringify(updatedReviews),
+    }));
+  };
+
+  const addReview = () => {
+    setReviews([
+      ...reviews,
+      {
+        rating: 0,
+        reviewDate: '',
+        authorName: '',
+        publisherName: '',
+        reviewerName: '',
+        reviewDescription: '',
+      }
+    ]);
+  };
+
+  const removeReview = (index) => {
+    if (reviews.length > 1) {
+      const updatedReviews = [...reviews];
+      updatedReviews.splice(index, 1);
+      setReviews(updatedReviews);
+      setEditForm(prev => ({
+        ...prev,
+        review_detail: JSON.stringify(updatedReviews),
+      }));
+    }
+  };
+
   const handleEditChange = (e) => {
     const { name, value, type, checked } = e.target;
     setEditForm(prev => ({
@@ -319,6 +433,9 @@ export default function UniversityList() {
     setIsSubmitting(true);
     try {
       // Debug: Log what's being sent
+
+      console.log("Popular Status", editForm.popular)
+
       const updateData = {
         name: editForm.name.trim(),
         founded_in: editForm.founded_in.trim() || null,
@@ -326,11 +443,11 @@ export default function UniversityList() {
         city: editForm.city.trim() || null,
         address: editForm.address.trim() || null,
         postcode: editForm.postcode.trim() || null,
-        phone_no: editForm.phone_no.trim() || null,
+        phone_no: editForm.phone_no || null,
         agency_number: editForm.agency_number.trim() || null,
-        total_students: editForm.total_students && editForm.total_students.trim() !== '' ? parseInt(editForm.total_students) : null,
-        international_student: editForm.international_student && editForm.international_student.trim() !== '' ? parseInt(editForm.international_student) : null,
-        scholarship: editForm.scholarship === 'true' || editForm.scholarship === true,
+        total_students: editForm.total_students || null,
+        international_student: editForm.international_student || null,
+        scholarship: editForm.scholarship === 'Yes' ? 1 : 0,
         about: editForm.about.trim() || null,
         guide: editForm.guide.trim() || null,
         expanse: editForm.expanse.trim() || null,
@@ -338,17 +455,15 @@ export default function UniversityList() {
         accommodation: editForm.accommodation.trim() || null,
         accommodation_detail: editForm.accommodation_detail.trim() || null,
         intake: editForm.intake.trim() || null,
-        ranking: editForm.ranking && editForm.ranking.trim() !== '' ? parseFloat(editForm.ranking) : null,
+        ranking: editForm.ranking,
         designation: editForm.designation.trim() || null,
         alternate_email: editForm.alternate_email.trim() || null,
         website: editForm.website.trim() || null,
         popular: editForm.popular,
-        sm_question: editForm.sm_question,
-        sm_answer: editForm.sm_answer,
         review_detail: editForm.review_detail,
         logo_url: editForm.logo_url || null,
         feature_image_url: editForm.feature_image_url || null,
-        other_images_urls: editForm.other_images_urls,
+        
       };
       
       console.log('Sending update data:', updateData);
@@ -367,41 +482,39 @@ export default function UniversityList() {
         throw new Error(errorData.error || errorData.message || 'Failed to update university');
       }
 
-      const updatedUniversity = await response.json();
+      const data = await response.json();
       
       // Update the university in the local state
       setUniversities(universities.map(uni => 
         uni.id === editingUniversity.id ? {
           ...uni,
-          name: editForm.name.trim(),
-          founded_in: editForm.founded_in.trim(),
-          country: editForm.country.trim(),
-          city: editForm.city.trim(),
-          address: editForm.address.trim(),
-          postcode: editForm.postcode.trim(),
-          phone_no: editForm.phone_no.trim(),
-          agency_number: editForm.agency_number.trim(),
-          total_students: parseInt(editForm.total_students) || 0,
-          international_student: parseInt(editForm.international_student) || 0,
-          scholarship: editForm.scholarship.trim(),
-          about: editForm.about.trim(),
-          guide: editForm.guide.trim(),
-          expanse: editForm.expanse.trim(),
-          languages: editForm.languages.trim(),
-          accommodation: editForm.accommodation.trim(),
-          accommodation_detail: editForm.accommodation_detail.trim(),
-          intake: editForm.intake.trim(),
-          ranking: editForm.ranking.trim(),
-          designation: editForm.designation.trim(),
-          alternate_email: editForm.alternate_email.trim(),
-          website: editForm.website.trim(),
-          popular: editForm.popular,
-          sm_question: editForm.sm_question,
-          sm_answer: editForm.sm_answer,
-          review_detail: editForm.review_detail,
-          logo_url: editForm.logo_url,
-          feature_image_url: editForm.feature_image_url,
-          other_images_urls: editForm.other_images_urls,
+          name: data.data.name,
+          founded_in: data.data.founded_in,
+          country: data.data.country,
+          city: data.data.city,
+          address: data.data.address,
+          postcode: data.data.postcode,
+          phone_no: data.data.phone_no,
+          agency_number: data.data.agency_number,
+          total_students: parseInt(data.data.total_students) || 0,
+          international_student: parseInt(data.data.international_student) || 0,
+          scholarship: data.data.scholarship === 1 ? "Yes" : "No",
+          about: data.data.about,
+          guide: data.data.guide,
+          expanse: data.data.expanse,
+          languages: data.data.languages,
+          accommodation: data.data.accommodation,
+          accommodation_detail: data.data.accommodation_detail,
+          intake: data.data.intake,
+          ranking: data.data.ranking,
+          designation: data.data.designation,
+          alternate_email: data.data.alternate_email,
+          website: data.data.website,
+          popular: data.data.popular === 0 ? false : true,
+          review_detail: data.data.review_detail,
+          logo_url: data.data.logo_url,
+          feature_image_url: data.data.feature_image_url,
+          
         } : uni
       ));
 
@@ -432,13 +545,16 @@ export default function UniversityList() {
           alternate_email: '',
           website: '',
           popular: false,
-          sm_question: '[]',
-          sm_answer: '[]',
           review_detail: '[]',
           logo_url: '',
           feature_image_url: '',
-          other_images_urls: '[]',
+          
         });
+
+        setUploadedImages({
+          logo: null,
+          feature_image: null
+        })
       
       Swal.fire({
         icon: 'success',
@@ -555,6 +671,7 @@ export default function UniversityList() {
                 <input
                   type="text"
                   placeholder="Search by name, city, country, or address..."
+                  required
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0B6D76] focus:border-transparent"
@@ -760,7 +877,7 @@ export default function UniversityList() {
       {showEditModal && editingUniversity && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4"
-          onClick={() => {
+          /*onClick={() => {
             setShowEditModal(false);
             setEditingUniversity(null);
             setActiveEditTab('GENERAL');
@@ -788,14 +905,12 @@ export default function UniversityList() {
               alternate_email: '',
               website: '',
               popular: false,
-              sm_question: '[]',
-              sm_answer: '[]',
               review_detail: '[]',
               logo_url: '',
               feature_image_url: '',
-              other_images_urls: '[]',
+              
             });
-          }}
+          }}*/
         >
           <div 
             className="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
@@ -834,12 +949,10 @@ export default function UniversityList() {
                     alternate_email: '',
                     website: '',
                     popular: false,
-                    sm_question: '[]',
-                    sm_answer: '[]',
                     review_detail: '[]',
                     logo_url: '',
                     feature_image_url: '',
-                    other_images_urls: '[]',
+                    
                   });
                 }}
                 className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
@@ -931,6 +1044,102 @@ export default function UniversityList() {
                       />
                     </div>
 
+                    {/* Reviews Section */}
+                    <div className="space-y-4 md:col-span-2">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-medium">University Reviews</h3>
+                        <button
+                          type="button"
+                          onClick={addReview}
+                          className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                        >
+                          Add Review
+                        </button>
+                      </div>
+
+                      {reviews.map((review, index) => (
+                        <div key={index} className="p-4 border rounded-lg space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                              <select
+                                value={review.rating}
+                                onChange={(e) => handleReviewChange(index, 'rating', e.target.value)}
+                                className="w-full border px-3 py-2 rounded"
+                              >
+                                <option value="0">Select rating</option>
+                                <option value="1">1 Star</option>
+                                <option value="2">2 Stars</option>
+                                <option value="3">3 Stars</option>
+                                <option value="4">4 Stars</option>
+                                <option value="5">5 Stars</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                              <input
+                                type="date"
+                                value={review.reviewDate}
+                                onChange={(e) => handleReviewChange(index, 'reviewDate', e.target.value)}
+                                className="w-full border px-3 py-2 rounded"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Author's Name</label>
+                              <input
+                                type="text"
+                                value={review.authorName}
+                                onChange={(e) => handleReviewChange(index, 'authorName', e.target.value)}
+                                className="w-full border px-3 py-2 rounded"
+                                placeholder="Author's name"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Publisher's Name</label>
+                              <input
+                                type="text"
+                                value={review.publisherName}
+                                onChange={(e) => handleReviewChange(index, 'publisherName', e.target.value)}
+                                className="w-full border px-3 py-2 rounded"
+                                placeholder="Publisher's name"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Reviewer's Name</label>
+                              <input
+                                type="text"
+                                value={review.reviewerName}
+                                onChange={(e) => handleReviewChange(index, 'reviewerName', e.target.value)}
+                                className="w-full border px-3 py-2 rounded"
+                                placeholder="Reviewer's name"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Review Description</label>
+                            <textarea
+                              value={review.reviewDescription}
+                              onChange={(e) => handleReviewChange(index, 'reviewDescription', e.target.value)}
+                              className="w-full border px-3 py-2 rounded"
+                              rows={3}
+                              placeholder="Review description"
+                            />
+                          </div>
+                          {reviews.length > 1 && (
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => removeReview(index)}
+                                className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                              >
+                                Remove Review
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
                     {/* Popular Status */}
                     <div className="md:col-span-2">
                       <label className="flex items-center space-x-2">
@@ -938,6 +1147,7 @@ export default function UniversityList() {
                           type="checkbox"
                           name="popular"
                           checked={editForm.popular}
+                          value={editForm.popular}
                           onChange={handleEditChange}
                           className="rounded text-[#0B6D76] focus:ring-[#0B6D76]"
                         />
@@ -1046,7 +1256,7 @@ export default function UniversityList() {
                         value={editForm.scholarship}
                         onChange={handleEditChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0B6D76] focus:border-transparent"
-                        placeholder="e.g., Available for international students"
+                        placeholder="e.g., Yes or No"
                       />
                     </div>
 
@@ -1141,6 +1351,98 @@ export default function UniversityList() {
                 </div>
               )}
 
+              {activeEditTab === 'IMAGES' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">University Logo</label>
+                    {editingUniversity.logo && 
+                      <img
+                        src={editingUniversity.logo}
+                        alt="Logo preview"
+                        className="h-20 object-contain"
+                      />
+                    }
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileUpload(e, 'logo')}
+                      className="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100"
+                      disabled={isUploading}
+                    />
+                    {uploadedImages.logo && (
+                      <div className="mt-2">
+                        <img
+                          src={uploadedImages.logo.url}
+                          alt="Logo preview"
+                          className="h-20 object-contain"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">{uploadedImages.logo.file.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(0, 'logo')}
+                          className="mt-1 text-red-600 text-sm"
+                          disabled={isUploading}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    {isUploading && !uploadedImages.logo && (
+                      <div className="mt-2 text-sm text-gray-500">Uploading logo...</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Feature Image</label>
+                    { editingUniversity.feature_image &&
+                      <img
+                        src={editingUniversity.feature_image}
+                        alt="Featured Image preview"
+                        className="h-20 object-contain"
+                      />
+                      }
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileUpload(e, 'feature_image')}
+                      className="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100"
+                      disabled={isUploading}
+                    />
+                    {uploadedImages.feature_image && (
+                      <div className="mt-2">
+                        <img
+                          src={uploadedImages.feature_image.url}
+                          alt="Feature image preview"
+                          className="h-40 object-contain"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">{uploadedImages.feature_image.file.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(0, 'feature_image')}
+                          className="mt-1 text-red-600 text-sm"
+                          disabled={isUploading}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    {isUploading && !uploadedImages.feature_image && (
+                      <div className="mt-2 text-sm text-gray-500">Uploading feature image...</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {activeEditTab === 'ABOUT UNIVERSITY' && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1225,12 +1527,9 @@ export default function UniversityList() {
                       alternate_email: '',
                       website: '',
                       popular: false,
-                      sm_question: '[]',
-                      sm_answer: '[]',
                       review_detail: '[]',
                       logo_url: '',
                       feature_image_url: '',
-                      other_images_urls: '[]',
                     });
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"

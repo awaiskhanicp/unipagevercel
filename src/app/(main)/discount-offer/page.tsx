@@ -12,6 +12,7 @@ import { MdOutlineMail, MdOutlinePhoneEnabled } from "react-icons/md";
 import { HiOutlineAcademicCap } from 'react-icons/hi';
 import { CiPercent } from "react-icons/ci";
 import { IoMdCheckmarkCircleOutline } from "react-icons/io";
+import Image from "next/image";
 import Swal from 'sweetalert2';
 
 const DiscountOfferPage = () => {
@@ -38,7 +39,7 @@ const DiscountOfferPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/internal/discount-offers', {
+      const response = await fetch('/api/frontend/discount-offers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -87,11 +88,13 @@ const DiscountOfferPage = () => {
     <div className="">
       {/* Hero Section */}
       <section className="relative md:h-[50vh] sm:h-[50vh] md:pt-[0px] sm:pt-[90px] pt-[90px] h-[50vh] flex items-center justify-center overflow-hidden">
-        <img
-          src="/assets/disb.png"
-          alt="Hero Background"
-          className="absolute top-0 left-0 w-full h-full object-cover z-0"
-        />
+        <Image
+        src="/assets/disb.png"
+        alt="Hero Background"
+        fill
+        priority
+        className="object-cover z-0"
+      />
         <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
         <div className="absolute inset-0 z-10 bg-gradient-to-b from-[rgba(0,0,0,0.1)] to-[rgba(0,0,0,0.9)]"></div>
         <div className="relative z-20 text-center px-4 max-w-4xl mx-auto pb-12">
@@ -109,8 +112,8 @@ const DiscountOfferPage = () => {
               {/* Left Side Images */}
               <div className="w-full lg:w-[50%] flex gap-6 lg:gap-12">
                 <div className="flex flex-col md:block sm:hidden hidden gap-[20px] w-1/2">
-                  <img src='/assets/dis1.png' alt='Discount 1' className='w-full' />
-                  <img src='/assets/dis2.png' alt='Discount 2' className='w-full' />
+                  <Image src="/assets/dis1.png" alt="Discount 1" width={400} height={400} className="w-full" />
+                  <Image src="/assets/dis2.png" alt="Discount 2" width={400} height={400} className="w-full" />
                 </div>
                 <div className="flex flex-col md:block sm:hidden hidden gap-[30px] w-1/2">
                   <div className="bg-[#3C8A91] mb-[20px] rounded-tl-[63px] rounded-tr-[63px] rounded-br-[63px] w-[130px] h-[126px] flex justify-center items-center">
@@ -121,7 +124,9 @@ const DiscountOfferPage = () => {
                       </span>
                     </div>
                   </div>
-                  <img src='/assets/dis3.png' alt='Discount 3' className='w-full' />
+                  
+                  <Image src="/assets/dis3.png" alt="Discount 3" width={400} height={400} className="w-full" />
+
                 </div>
               </div>
 
@@ -273,9 +278,11 @@ const DiscountOfferPage = () => {
               {/* Image Section */}
               <div className="relative rounded-3xl overflow-visible shadow-lg h-full">
                 <div className="absolute left-[-5%] top-1/2 -translate-y-1/2 h-[80%] w-[30px] bg-[var(--brand-color)] rounded-bl-3xl rounded-tl-3xl z-10"></div>
-                <img
+                <Image
                   src="/assets/dsic.png"
                   alt="Discount Offer"
+                  width={600}
+                  height={600}
                   className="w-full h-full rounded-[24px] md:block sm:hidden hidden object-cover relative z-0"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B6D76] to-transparent opacity-50 rounded-[24px]"></div>

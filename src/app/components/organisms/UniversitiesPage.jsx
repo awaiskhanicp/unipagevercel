@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import Heading from '../atoms/Heading';
 import Button from '../atoms/Button';
 import Paragraph from '../atoms/Paragraph';
 import Container from '../atoms/Container';
-import UniversityCountrySection from '../molecules/UniversityCountrySection';
 import UniversityCoursesSection from '../molecules/UniversityCoursesSection';
 
 const UniversitiesPage = () => {
@@ -22,7 +20,10 @@ const UniversitiesPage = () => {
         setLoading(true);
         
         // Fetch countries data
-        const countriesResponse = await fetch('/api/internal/countries');
+        const countriesResponse = await fetch('/api/frontend/getcountries', {
+          method: "POST",
+          cache: 'no-store'
+        });
         if (!countriesResponse.ok) {
           throw new Error('Failed to fetch countries');
         }
@@ -38,7 +39,10 @@ const UniversitiesPage = () => {
         }
 
         // Fetch universities
-        const universitiesResponse = await fetch('/api/internal/university');
+        const universitiesResponse = await fetch('/api/frontend/getalluniversities', {
+          method: "POST",
+          cache: 'no-store'
+        });
         if (!universitiesResponse.ok) {
           throw new Error('Failed to fetch universities');
         }
@@ -55,7 +59,10 @@ const UniversitiesPage = () => {
         }
 
         // Fetch subjects
-        const subjectsResponse = await fetch('/api/internal/subject');
+        const subjectsResponse = await fetch('/api/frontend/getsubject', {
+          method: "POST",
+          cache: 'no-store'
+        });
         if (!subjectsResponse.ok) {
           throw new Error('Failed to fetch subjects');
         }
@@ -67,7 +74,10 @@ const UniversitiesPage = () => {
           setCoursesData({});
         } else {
           // Fetch courses data
-          const coursesResponse = await fetch('/api/internal/course');
+          const coursesResponse = await fetch('/api/frontend/getallcourses', {
+          method: "POST",
+          cache: 'no-store'
+        });
           if (!coursesResponse.ok) {
             throw new Error('Failed to fetch courses');
           }

@@ -15,7 +15,7 @@ import { slugify } from '../../utils/slugify';
 import { useWishlist } from '../../context/WishlistContext';
 import Pagination from '../../admin/components/Pagination';
 
-const UniversityListingContent = ({ initialType, initialCountry, initialSearch, initialSubject, initialQualification }) => {
+const UniversityListingContent = ({ initialType, initialCountry, initialSearch, initialQualification }) => {
   const router = useRouter();
   
   // Track component re-renders
@@ -598,7 +598,6 @@ const UniversityListingContent = ({ initialType, initialCountry, initialSearch, 
             type="text"
             value={searchInput}
             onChange={handleSearchInputChange}
-            onKeyPress={handleSearchKeyPress}
             placeholder="Search universities, courses, articles..."
             className="w-full px-3 py-2 pr-20 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           />
@@ -711,12 +710,12 @@ const UniversityListingContent = ({ initialType, initialCountry, initialSearch, 
               <label key={`qual-${option}-${index}`} className="flex items-center">
                 <input
                   type="checkbox"
-                  value={option}
-                  checked={filters.qualifications.includes(option)}
-                  onChange={() => handleQualificationChange(option)}
+                  value={option.id}
+                  checked={filters.qualifications.includes(option.id)}
+                  onChange={() => handleQualificationChange(option.id)}
                   className="mr-2"
                 />
-                <span className="text-sm">{option}</span>
+                <span className="text-sm">{option.title}</span>
               </label>
             ))
           ) : (
@@ -1134,7 +1133,6 @@ const UniversityListingSidebar = () => {
         initialType={initialType}
         initialCountry={initialCountry}
         initialSearch={initialSearch}
-        initialSubject={initialSubject}
         initialQualification={initialQualification}
       />
     </Suspense>

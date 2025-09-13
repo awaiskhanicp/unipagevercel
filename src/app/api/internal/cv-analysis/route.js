@@ -4,7 +4,7 @@ import { join } from 'path';
 import { readFileSync } from 'fs';
 
 import { prisma } from '../../../../lib/prisma';
-// import { openAIConfig, isOpenAIConfigured, validateAPIKey } from '../../../../../config/openai';
+//import { openAIConfig, isOpenAIConfigured, validateAPIKey } from '../../../../../config/openai';
 
 export async function POST(req) {
   try {

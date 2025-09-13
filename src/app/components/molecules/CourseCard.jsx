@@ -6,7 +6,7 @@ import Paragraph from '../atoms/Paragraph';
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 
-const CourseCard = ({ image, title, university, location, type, discount, id }) => {
+const CourseCard = ({ image, title, university, location, id }) => {
   // Fallback for image
   const validImage = image && typeof image === 'string' && image.trim() !== '' ? image : '/assets/co1.png';
   return (

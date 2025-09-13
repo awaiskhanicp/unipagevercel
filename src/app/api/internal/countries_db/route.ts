@@ -9,8 +9,6 @@ export async function GET() {
     'SELECT id, name FROM countries_db ORDER BY name ASC'
   );
 
-  console.log("Countries found: " + rows.length);
-
   if(rows.length === 0)
   {
     return NextResponse.json(
@@ -22,8 +20,6 @@ export async function GET() {
       }
     );
   }
-
-  console.log(rows);
   
   return NextResponse.json(
     {

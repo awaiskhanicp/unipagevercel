@@ -39,12 +39,8 @@ export default function AddUniversity() {
   const [uploadedImages, setUploadedImages] = useState({
     logo: null,
     feature_image: null,
-    other_images: []
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Schema Markup Questions & Answers
-  const [schemaMarkup, setSchemaMarkup] = useState([{ question: '', answer: '' }]);
   
   // Reviews
   const [reviews, setReviews] = useState([
@@ -83,12 +79,9 @@ export default function AddUniversity() {
     alternate_email: '',
     website: '',
     popular: false,
-    sm_question: JSON.stringify([]),
-    sm_answer: JSON.stringify([]),
     review_detail: JSON.stringify([]),
     logo_url: '',
     feature_image_url: '',
-    other_images_urls: JSON.stringify([]),
   });
 
     useEffect(() => {
@@ -127,19 +120,6 @@ export default function AddUniversity() {
     fetchCountries();
   }, []);
 
-  // Update form data when schemaMarkup or reviews change
-  useEffect(() => {
-    const questions = schemaMarkup.map(item => item.question);
-    const answers = schemaMarkup.map(item => item.answer);
-    
-    setFormData(prev => ({
-      ...prev,
-      sm_question: JSON.stringify(questions),
-      sm_answer: JSON.stringify(answers),
-      review_detail: JSON.stringify(reviews)
-    }));
-  }, [schemaMarkup, reviews]);
-
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -155,36 +135,15 @@ export default function AddUniversity() {
     }));
   };
 
-  // Schema Markup Handlers
-  const handleSchemaQuestionChange = (index, value) => {
-    const updatedSchema = [...schemaMarkup];
-    updatedSchema[index].question = value;
-    setSchemaMarkup(updatedSchema);
-  };
-
-  const handleSchemaAnswerChange = (index, value) => {
-    const updatedSchema = [...schemaMarkup];
-    updatedSchema[index].answer = value;
-    setSchemaMarkup(updatedSchema);
-  };
-
-  const addSchemaField = () => {
-    setSchemaMarkup([...schemaMarkup, { question: '', answer: '' }]);
-  };
-
-  const removeSchemaField = (index) => {
-    if (schemaMarkup.length > 1) {
-      const updatedSchema = [...schemaMarkup];
-      updatedSchema.splice(index, 1);
-      setSchemaMarkup(updatedSchema);
-    }
-  };
-
   // Review Handlers
   const handleReviewChange = (index, field, value) => {
     const updatedReviews = [...reviews];
     updatedReviews[index][field] = value;
     setReviews(updatedReviews);
+    setFormData(prev => ({
+      ...prev,
+      review_detail: JSON.stringify(updatedReviews),
+    }));
   };
 
   const addReview = () => {
@@ -206,6 +165,10 @@ export default function AddUniversity() {
       const updatedReviews = [...reviews];
       updatedReviews.splice(index, 1);
       setReviews(updatedReviews);
+      setFormData(prev => ({
+        ...prev,
+        review_detail: JSON.stringify(updatedReviews),
+      }));
     }
   };
 
@@ -243,32 +206,18 @@ export default function AddUniversity() {
       let uploadType = 'university-logo'; // default
       if (field === 'logo') uploadType = 'university-logo';
       else if (field === 'feature_image') uploadType = 'university-feature';
-      else if (field === 'other_images') uploadType = 'university-gallery';
       
       const imageUrl = await uploadImage(file, uploadType);
 
-      if (field === 'other_images') {
-        setUploadedImages(prev => ({
-          ...prev,
-          other_images: [...prev.other_images, { file, url: imageUrl }]
-        }));
-        
-        const currentUrls = safeParse(formData.other_images_urls);
-        setFormData(prev => ({
-          ...prev,
-          other_images_urls: JSON.stringify([...currentUrls, imageUrl])
-        }));
-      } else {
-        setUploadedImages(prev => ({
-          ...prev,
-          [field]: { file, url: imageUrl }
-        }));
-        setFormData(prev => ({
-          ...prev,
-          [`${field}_url`]: imageUrl,
-          [field]: imageUrl // <-- ensure legacy field is also set
-        }));
-      }
+      setUploadedImages(prev => ({
+        ...prev,
+        [field]: { file, url: imageUrl }
+      }));
+      setFormData(prev => ({
+        ...prev,
+        [`${field}_url`]: imageUrl,
+        [field]: imageUrl // <-- ensure legacy field is also set
+      }));
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -282,31 +231,16 @@ export default function AddUniversity() {
   };
 
   const removeImage = (index, field) => {
-    if (field === 'other_images') {
-      const updatedImages = [...uploadedImages.other_images];
-      updatedImages.splice(index, 1);
-      
-      setUploadedImages(prev => ({
-        ...prev,
-        other_images: updatedImages
-      }));
-      
-      const currentUrls = safeParse(formData.other_images_urls);
-      currentUrls.splice(index, 1);
-      setFormData(prev => ({
-        ...prev,
-        other_images_urls: JSON.stringify(currentUrls)
-      }));
-    } else {
-      setUploadedImages(prev => ({
-        ...prev,
-        [field]: null
-      }));
-      setFormData(prev => ({
-        ...prev,
-        [`${field}_url`]: ''
-      }));
-    }
+    
+    setUploadedImages(prev => ({
+      ...prev,
+      [field]: null
+    }));
+    setFormData(prev => ({
+      ...prev,
+      [`${field}_url`]: ''
+    }));
+
   };
 
   const handleSubmit = async (e) => {
@@ -349,7 +283,6 @@ export default function AddUniversity() {
         }
       }
 
-      const result = await response.json();
       Swal.fire({
         icon: 'success',
         title: 'Success!',
@@ -439,58 +372,7 @@ export default function AddUniversity() {
                 <label className="text-sm">Mark as Popular University</label>
               </div>
             </div>
-
-            {/* Schema Markup Section */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Schema Markup Questions & Answers</h3>
-                <button
-                  type="button"
-                  onClick={addSchemaField}
-                  className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
-                >
-                  Add Question
-                </button>
-              </div>
-
-              {schemaMarkup.map((item, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-1 gap-4 p-4 border rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">schema Question</label>
-                    <input
-                      type="text"
-                      value={item.question}
-                      onChange={(e) => handleSchemaQuestionChange(index, e.target.value)}
-                      className="w-full border px-3 py-2 rounded"
-                      placeholder="Enter schema question"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">schema Answer</label>
-                    <div className="flex gap-2">
-                      <textarea
-                        type="text"
-                        value={item.answer}
-                        onChange={(e) => handleSchemaAnswerChange(index, e.target.value)}
-                        className="w-full border px-3 py-2 rounded"
-                         rows={3}
-                        placeholder="Enter schema description"
-                      />
-                      {schemaMarkup.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeSchemaField(index)}
-                          className="bg-red-500 text-white px-3 py-1 rounded h-fit"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
+            
             {/* Reviews Section */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
@@ -818,45 +700,6 @@ export default function AddUniversity() {
               )}
               {isUploading && !uploadedImages.feature_image && (
                 <div className="mt-2 text-sm text-gray-500">Uploading feature image...</div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Other Images</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e, 'other_images')}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-                disabled={isUploading}
-              />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                {uploadedImages.other_images.map((image, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={image.url}
-                      alt={`University image ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index, 'other_images')}
-                      className="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                      disabled={isUploading}
-                    >
-                      Remove
-                    </button>
-                    <p className="text-xs text-gray-500 truncate">{image.file.name}</p>
-                  </div>
-                ))}
-              </div>
-              {isUploading && (
-                <div className="mt-2 text-sm text-gray-500">Uploading images...</div>
               )}
             </div>
           </div>

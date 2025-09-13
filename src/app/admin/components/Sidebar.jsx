@@ -139,12 +139,6 @@ const Sidebar = ({ isOpen, onClose }) => {
         { name: "Category List", path: "/admin/articles/categories" }
       ]
     },
-    {
-      name: "Contact Us Message",
-      icon: Phone,
-      path: "/admin/contact-message",
-      subItems: [{ name: "All Messages", path: "/admin/contact-message" }]
-    },
   {
       name: "Visit Visa",
       icon: Plane,
@@ -177,7 +171,10 @@ const Sidebar = ({ isOpen, onClose }) => {
         { name: "Complaints", path: "/admin/inbox/complaints" }
       ]
     },
-    { name: "Discount Offer", icon: Bell, path: "/admin/discount-offer" },
+    { name: "Discount Offer", icon: FileText, path: "/admin/discount-offer" },
+    { name: "Online Consultant ", icon: FileText, path: "/admin/online-consultant" },
+    { name: "Contact Us ", icon: FileText, path: "/admin/contact-us" },
+    { name: "Minhaj Leads", icon: FileText, path: "/admin/minhaj-leads" },
     // {
     //   name: "University Contacts",
     //   icon: Contact,
@@ -194,8 +191,9 @@ const Sidebar = ({ isOpen, onClose }) => {
       icon: FileText,
       path: "/admin/student-support",
       subItems: [
-        { name: "Add Document", path: "/admin/student-support/add" },
-        { name: "Document List", path: "/admin/student-support/list" }
+        { name: "Add Document", path: "/admin/student-support-documents/add" },
+        { name: "Document List", path: "/admin/student-support-documents/list" },
+        { name: "Document Downloads", path: "/admin/student-support-document-downloads" }
       ]
     }
   ];

@@ -6,6 +6,9 @@ import Button from '../atoms/Button';
 import { useRouter } from 'next/navigation';
 
 export const JobOpportunitiesfirst = ({ id, image, title, workType, location, experience, skills }) => {
+
+  const skillsArray = Array.isArray(skills) ? skills : (skills ? skills.split(',') : []);
+
   const router = useRouter();
   const handleClick = () => {
     if (id) router.push(`/jobs/job-detail/${id}`);
@@ -54,7 +57,7 @@ export const JobOpportunitiesfirst = ({ id, image, title, workType, location, ex
           <Paragraph>
             <div className="flex items-start gap-2">
               <FaComments className="text-teal-600 mt-1" />
-              <span>{skills.join(', ')}</span>
+              <span>{skillsArray.join(', ')}</span>
             </div>
           </Paragraph>
         </div>

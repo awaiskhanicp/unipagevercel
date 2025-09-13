@@ -41,10 +41,7 @@ const DiscountOfferList = () => {
     setCurrentPage(1);
   }, [appliedSearchTerm, appliedStartDate, appliedEndDate, appliedEducationFilter, appliedPercentageFilter]);
 
-  useEffect(() => {
-    fetchDiscountOffers();
-  }, [currentPage, appliedSearchTerm, appliedStartDate, appliedEndDate, appliedEducationFilter, appliedPercentageFilter]);
-
+useEffect(() => {
   const fetchDiscountOffers = async () => {
     try {
       const params = new URLSearchParams({
@@ -70,8 +67,8 @@ const DiscountOfferList = () => {
 
       const response = await fetch(`/api/internal/discount-offers?${params.toString()}`);
 
-      if(!response.ok){
-        const data = await response.json()
+      if (!response.ok) {
+        const data = await response.json();
         Swal.fire({
           icon: 'error',
           title: 'Oops...',
@@ -95,6 +92,19 @@ const DiscountOfferList = () => {
       });
     }
   };
+
+  fetchDiscountOffers();
+}, [
+  currentPage,
+  itemsPerPage,               
+  appliedSearchTerm,
+  appliedStartDate,
+  appliedEndDate,
+  appliedEducationFilter,
+  appliedPercentageFilter,
+]);
+
+
 
   const handleSearch = () => {
     setAppliedSearchTerm(searchTerm);
@@ -249,7 +259,7 @@ const DiscountOfferList = () => {
             {hasActiveFilters && (
               <div className="text-sm text-gray-600 flex flex-wrap gap-2">
                 Active filters: 
-                {appliedSearchTerm && <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">Search: "{appliedSearchTerm}"</span>}
+                {appliedSearchTerm && <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">Search: &quot;{appliedSearchTerm}&quot;</span>}
                 {appliedStartDate && <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Start: {appliedStartDate}</span>}
                 {appliedEndDate && <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">End: {appliedEndDate}</span>}
                 {appliedEducationFilter && <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded">Education: {appliedEducationFilter}</span>}

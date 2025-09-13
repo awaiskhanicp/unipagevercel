@@ -23,6 +23,7 @@ const UniversityDetails = () => {
   const [relatedUniversities, setRelatedUniversities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [subject, setsubjects] = useState([]);
 
   const params = useParams();
   const { slug } = params;
@@ -214,30 +215,24 @@ const UniversityDetails = () => {
         setLoading(true);
         
         // Fetch university data
-        const uniRes = await fetch(`/api/internal/university/${slug}`);
-        if (!uniRes.ok) throw new Error('University not found');
-        const uniData = await uniRes.json();
-        setUniversity(uniData);
-
-        // Fetch courses in parallel
-        const coursesRes = await fetch('/api/internal/course');
-        const coursesData = await coursesRes.json();
-        const allCourses = coursesData.data || [];
-        
-        // Filter courses for this university and ensure they have subjects
-        const filteredCourses = allCourses.filter(course => {
-          return course.university_id === uniData.id && course.subject;
+        const uniRes = await fetch(`/api/frontend/universitydetails/${slug}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store'
         });
-        setRelatedCourses(filteredCourses);
 
-        // Fetch related universities
-        const universitiesRes = await fetch('/api/internal/university');
-        const universitiesData = await universitiesRes.json();
-        const allUniversities = universitiesData.data || [];
-        
-        setRelatedUniversities(
-          allUniversities.filter(u => u.id !== uniData.id).slice(0, 3)
-        );
+        if(!uniRes.ok){
+
+          const data = await uniRes.json();
+
+          throw new Error(data.message || 'Failed to fetch university data')
+        }
+
+        const uniData = await uniRes.json();
+
+        setUniversity(uniData.data)
+
+        setRelatedUniversities(uniData.realtedUniversities)
 
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -270,8 +265,7 @@ const UniversityDetails = () => {
       case 'courses':
         return (
           <UniversityCourses 
-            university={university} 
-            relatedCourses={relatedCourses.filter(c => c.subject)} 
+            university={university}
           />
         );
       case 'reviews':
@@ -306,90 +300,98 @@ const UniversityDetails = () => {
     );
   }
 
+  const description = `${university.name} ${university.country} offers admission and scholarships ${new Date().getFullYear()} in total ${university.courses_count} courses. Check courses tution fees and these courses are taught in ${university.language} language.`
+
+  const title = `${university.name} Admission,Scholarship & courses Fee ${new Date().getFullYear()}`;
+
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative md:h-[84vh] sm:h-[100vh] h-[100vh] flex items-center justify-center overflow-hidden">
-        <img
-          src={university.banner_image || "/assets/detail.png"}
-          alt={`${university.name} campus`}
-          className="absolute top-0 left-0 w-full h-full object-cover object-top z-0"
-        />
-        <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
-        <div className="absolute inset-0 z-10 bg-gradient-to-b from-[rgba(0,0,0,0.1)] to-[rgba(0,0,0,0.9)]"></div>
-        <div className="relative z-20 text-center px-4 max-w-6xl mx-auto pb-12">
-          <Heading level={1}>
-            <div className="text-white md:pt-[0px] sm:pt-[100px] pt-[100px]">
-              {university.name}
-            </div>
-          </Heading>
-          <Paragraph>
-           <p className="text-white text-lg mt-4">
-              {[university.city, university.country].filter(Boolean).join(', ')}
-            </p>
-          </Paragraph>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-6">
-            <div onClick={() => handleAdmissionRequest(university)}>
-              <Button 
-                size="lg" 
-                className="bg-white text-[#0B6D76] text-lg px-10 py-4 shadow-xl hover:shadow-2xl hover:bg-gray-100"
-              >
-                Request Information
-              </Button>
-            </div>
-            {/* <Link href="/apply-online">
-              <Button 
-                size="lg" 
-                className="bg-white text-[#0B6D76] text-lg px-10 py-4 shadow-xl hover:shadow-2xl hover:bg-gray-100"
-              >
-                Apply Now
-              </Button>
-            </Link> */}
-            <Link href="/free-consultation">
-              <Button 
-                size="lg" 
-                className="bg-white text-[#0B6D76] text-lg px-10 py-4 shadow-xl hover:shadow-2xl hover:bg-gray-100"
-              >
-                Free Consultation
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <Container>
-        <div className="complete-page-spaceing banner-bottom-space bottom-session-space">
-          {/* Tabbed Interface */}
-          <div className="">
-            {/* Tab Buttons */}
-            <div className="grid md:w-[70%] sm:w-[100%] w-[100%] grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8 mx-auto">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full h-32 flex flex-col items-center justify-center rounded-lg relative transition-all duration-300 p-4 ${
-                    activeTab === tab.id 
-                      ? 'bg-[#0B6D76] text-white shadow-lg' 
-                      : 'bg-[#f0fafa] text-[#0B6D76] hover:bg-[#e0f5f5]'
-                  }`}
+    <>
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      <div className="min-h-screen">
+        {/* Hero Section */}
+        <section className="relative md:h-[84vh] sm:h-[100vh] h-[100vh] flex items-center justify-center overflow-hidden">
+          <img
+            src={university.banner_image || "/assets/detail.png"}
+            alt={`${university.name} campus`}
+            className="absolute top-0 left-0 w-full h-full object-cover object-top z-0"
+          />
+          <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
+          <div className="absolute inset-0 z-10 bg-gradient-to-b from-[rgba(0,0,0,0.1)] to-[rgba(0,0,0,0.9)]"></div>
+          <div className="relative z-20 text-center px-4 max-w-6xl mx-auto pb-12">
+            <Heading level={1}>
+              <div className="text-white md:pt-[0px] sm:pt-[100px] pt-[100px]">
+                {university.name}
+              </div>
+            </Heading>
+            <Paragraph>
+            <p className="text-white text-lg mt-4">
+                {[university.city, university.country].filter(Boolean).join(', ')}
+              </p>
+            </Paragraph>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-6">
+              <div onClick={() => handleAdmissionRequest(university)}>
+                <Button 
+                  size="lg" 
+                  className="bg-white text-[#0B6D76] text-lg px-10 py-4 shadow-xl hover:shadow-2xl hover:bg-gray-100"
                 >
-                  <div className="text-2xl mb-2">{tab.icon}</div>
-                  <span className="text-sm font-medium">{tab.label}</span>
-                  {activeTab === tab.id && (
-                    <div className="absolute -bottom-2 w-4 h-4 bg-[#0B6D76] rotate-45"></div>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab Content */}
-            <div className="w-full">
-              {renderContent()}
+                  Request Information
+                </Button>
+              </div>
+              {/* <Link href="/apply-online">
+                <Button 
+                  size="lg" 
+                  className="bg-white text-[#0B6D76] text-lg px-10 py-4 shadow-xl hover:shadow-2xl hover:bg-gray-100"
+                >
+                  Apply Now
+                </Button>
+              </Link> */}
+              <Link href="/free-consultation">
+                <Button 
+                  size="lg" 
+                  className="bg-white text-[#0B6D76] text-lg px-10 py-4 shadow-xl hover:shadow-2xl hover:bg-gray-100"
+                >
+                  Free Consultation
+                </Button>
+              </Link>
             </div>
           </div>
-        </div>
-      </Container>
-    </div>
+        </section>
+
+        <Container>
+          <div className="complete-page-spaceing banner-bottom-space bottom-session-space">
+            {/* Tabbed Interface */}
+            <div className="">
+              {/* Tab Buttons */}
+              <div className="grid md:w-[70%] sm:w-[100%] w-[100%] grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8 mx-auto">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full h-32 flex flex-col items-center justify-center rounded-lg relative transition-all duration-300 p-4 ${
+                      activeTab === tab.id 
+                        ? 'bg-[#0B6D76] text-white shadow-lg' 
+                        : 'bg-[#f0fafa] text-[#0B6D76] hover:bg-[#e0f5f5]'
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">{tab.icon}</div>
+                    <span className="text-sm font-medium">{tab.label}</span>
+                    {activeTab === tab.id && (
+                      <div className="absolute -bottom-2 w-4 h-4 bg-[#0B6D76] rotate-45"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab Content */}
+              <div className="w-full">
+                {renderContent()}
+              </div>
+            </div>
+          </div>
+        </Container>
+      </div>
+    </>
   );
 };
 

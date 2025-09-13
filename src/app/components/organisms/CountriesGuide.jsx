@@ -26,7 +26,7 @@ const CountriesGuide = () => {
     const fetchGuides = async () => {
       try {
         setGuidesLoading(true);
-        const response = await fetch(`/api/internal/guides?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
+        const response = await fetch(`/api/frontend/getguides?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
         if (!response.ok) throw new Error('Failed to fetch guides');
         const data = await response.json();
         setGuides(Array.isArray(data.data) ? data.data : []);

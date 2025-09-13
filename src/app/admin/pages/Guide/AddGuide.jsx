@@ -3,39 +3,28 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import SummernoteEditor from "../../../../app/components/organisms/SummernoteEditor";
+import Swal from "sweetalert2";
 
 const AddGuide = () => {
   const router = useRouter();
 
+
   const [universities, setUniversities] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  const [form, setForm] = useState({
-    type: "University",
-    university_id: "",
-    subject_id: "",
-    title: "",
-    slug: "",
-    subTitle: "",
-    sortOrder: "",
-    description: "",
-    schema: [{ question: "", answer: "" }],
-    reviews: [
-      {
-        rating: "",
-        date: "",
-        authorName: "",
-        publisherName: "",
-        reviewName: "",
-        reviewDescription: "",
-      },
-    ],
-    featuredImage: null,
-    show_meta: "off",
-    meta_title: "",
-    meta_description: "",
-    meta_keywords: "",
-    active: true,
-  });
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState("");
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState("University");
+  const [typeID, setTypeID] = useState("");
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [showMeta, setShowMeta] = useState(false);
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [metaKeywords, setMetaKeywords] = useState("");
+  const [isloading, setIsLoading] = useState(false);
+
 
   // Function to generate slug from title
   const generateSlug = (title) => {
@@ -48,200 +37,179 @@ const AddGuide = () => {
       .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
   };
 
-  // Fetch universities for dropdown
-  const fetchUniversities = async () => {
-    try {
-      console.log('Fetching universities for AddGuide...');
-      const response = await fetch('/api/internal/university');
-      console.log('Universities response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Universities API response:', data);
-        
-        // Handle different response formats
-        if (data.success && data.data) {
-          setUniversities(data.data);
-          console.log('Universities loaded (success format):', data.data.length);
-        } else if (Array.isArray(data)) {
-          setUniversities(data);
-          console.log('Universities loaded (array format):', data.length);
-        } else if (data.data && Array.isArray(data.data)) {
-          setUniversities(data.data);
-          console.log('Universities loaded (data.data format):', data.data.length);
-        } else {
-          console.log('Unexpected universities response format:', data);
-          setUniversities([]);
-        }
-      } else {
-        console.error('Failed to fetch universities:', response.status, response.statusText);
-      }
-    } catch (error) {
-      console.error('Error fetching universities:', error);
-    }
-  };
-
-  // Fetch subjects for dropdown
-  const fetchSubjects = async () => {
-    try {
-      console.log('Fetching subjects for AddGuide...');
-      const response = await fetch('/api/internal/subject');
-      console.log('Subjects response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Subjects API response:', data);
-        
-        // Handle different response formats
-        if (Array.isArray(data)) {
-          setSubjects(data);
-          console.log('Subjects loaded (array format):', data.length);
-        } else if (data.data && Array.isArray(data.data)) {
-          setSubjects(data.data);
-          console.log('Subjects loaded (data.data format):', data.data.length);
-        } else if (data.success && data.data) {
-          setSubjects(data.data);
-          console.log('Subjects loaded (success format):', data.data.length);
-        } else {
-          console.log('Unexpected subjects response format:', data);
-          setSubjects([]);
-        }
-      } else {
-        console.error('Failed to fetch subjects:', response.status, response.statusText);
-      }
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-    }
-  };
-
   // Fetch both universities and subjects on component mount
-  useEffect(() => {
-    fetchUniversities();
-    fetchSubjects();
-  }, []);
+  // Fetch universities and subjects on mount
+    useEffect(() => {
+  
+      const fetchdata = async () => {
+      const [universitiesResponse, subjectsResponse] = await Promise.all([
+        fetch('/api/internal/new/getuniversity', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }),
+        fetch('/api/internal/new/getsubject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }),
+      ]);
+
+      if(!universitiesResponse.ok || !subjectsResponse.ok) throw new Error('Failed to fetch data')
+
+      const universityData = await universitiesResponse.json();
+      const subjectsData = await subjectsResponse.json();
+
+      setUniversities(universityData.data);
+      setSubjects(subjectsData.data);
+
+    }
+
+    fetchdata()
+
+  }, [])
+
+  const uploadImage = async (file, uploadType = 'university-logo') => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('uploadType', uploadType); // Add upload type for proper S3 path
+
+      const response = await fetch('/api/internal/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  };
+
+  const handleFileUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+
+      // Determine upload type based on field
+      let uploadType = 'university-logo'; // default
+      if (field === 'featured_image') uploadType = 'university-feature';
+      
+      const imageUrl = await uploadImage(file, uploadType);
+
+      setUploadedImages(imageUrl);
+      
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Error',
+        text: error.message || 'Failed to upload image',
+        confirmButtonColor: '#0B6D76'
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    
+    setUploadedImages("");
+
+
+  };
 
   // Handle guide type change
   const handleTypeChange = (e) => {
     const newType = e.target.value;
-    setForm(prev => ({
-      ...prev,
-      type: newType,
-      // Reset the ID when type changes
-      university_id: "",
-      subject_id: ""
-    }));
+    setType(newType);
+    setTypeID("");
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    
-    // Auto-generate slug when title changes
-    if (name === 'title') {
-      const newSlug = generateSlug(value);
-      setForm(prev => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-        slug: newSlug
-      }));
-    } else if (name === 'show_meta') {
-      // Handle show_meta toggle specifically
-      setForm(prev => ({
-        ...prev,
-        show_meta: checked ? "on" : "off"
-      }));
-    } else {
-      setForm(prev => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
-    }
+  // Assuming SummernoteEditor expects `value` and `onChange` as props
+  const handleDescriptionChange = (content) => {
+    setDescription(content); // Update the description state with the editor's content
   };
 
-  const handleSchemaChange = (index, key, value) => {
-    const updated = [...form.schema];
-    updated[index][key] = value;
-    setForm({ ...form, schema: updated });
+  // Handle title change and auto-generate slug
+  const handleTitleChange = (e) => {
+    const newTitle = e.target.value;
+    setTitle(newTitle); // Set the title
+    setSlug(generateSlug(newTitle)); // Automatically generate and set the slug
   };
 
-  const handleReviewChange = (index, key, value) => {
-    const updated = [...form.reviews];
-    updated[index][key] = value;
-    setForm({ ...form, reviews: updated });
-  };
-
-  const addSchema = () =>
-    setForm((prev) => ({
-      ...prev,
-      schema: [...prev.schema, { question: "", answer: "" }],
-    }));
-
-  const removeSchema = (index) => {
-    const updated = [...form.schema];
-    updated.splice(index, 1);
-    setForm({ ...form, schema: updated });
-  };
-
-  const addReview = () =>
-    setForm((prev) => ({
-      ...prev,
-      reviews: [
-        ...prev.reviews,
-        {
-          rating: "",
-          date: "",
-          authorName: "",
-          publisherName: "",
-          reviewName: "",
-          reviewDescription: "",
-        },
-      ],
-    }));
-
-  const removeReview = (index) => {
-    const updated = [...form.reviews];
-    updated.splice(index, 1);
-    setForm({ ...form, reviews: updated });
+  // Handle checkbox change
+  const handleCheckboxChange = (e) => {
+    setShowMeta(e.target.checked); // Set state based on whether checkbox is checked
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const formData = new FormData();
+    try
+      {
+        setIsLoading(true);
+        // Construct the payload with all the form state values
+        const payload = {
+          title,
+          type,
+          type_id: typeID,
+          slug,
+          description,
+          is_active: isActive, // true or false
+          show_meta: showMeta ? "on" : "off", // Send as "on" or "off"
+          meta_title: metaTitle,
+          meta_description: metaDescription,
+          meta_keywords: metaKeywords,
+          image: uploadedImages, // Assuming this is the URL of the uploaded image
+        };
 
-    formData.append("user_id", 1);
-    formData.append("type", form.type);
-    formData.append("university_id", form.university_id || "");
-    formData.append("subject_id", form.subject_id || "");
-    formData.append("title", form.title);
-    formData.append("slug", form.slug);
-    formData.append("subTitle", form.subTitle);
-    formData.append("sortOrder", form.sortOrder);
-    formData.append("description", form.description);
-    formData.append("active", form.active);
-    formData.append("show_meta", form.show_meta);
-    formData.append("meta_title", form.meta_title);
-    formData.append("meta_description", form.meta_description);
-    formData.append("meta_keywords", form.meta_keywords);
+        console.log("Form Payload:", payload); // You can log to check the data structure
 
-    formData.append("schema", JSON.stringify(form.schema));
-    formData.append("reviews", JSON.stringify(form.reviews));
+        const res = await fetch("/api/internal/guides", {
+          method: "POST",
+          body: JSON.stringify(payload), // Send the payload as JSON
+        });
 
-    if (form.featuredImage) {
-      formData.append("featuredImage", form.featuredImage);
-    }
+        if(!res.ok)
+        {
+          const data = await res.json();
 
-    const res = await fetch("/api/internal/guides", {
-      method: "POST",
-      body: formData,
-    });
+          throw new Error(data.message || "Failed to add guide")
+        }
+        
+        const data = await res.json();
 
-    if (res.ok) {
-      // router.push("/guide");
-      alert("Guide added successfully");
-      console.log(res);
-    } else {
-      alert("Failed to add guide");
-    }
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: data.message,
+          confirmButtonColor: '#10b981'
+        })
+
+        router.push("/admin/guide");
+
+      } catch (error) {
+        console.error("Error submitting form:", error);
+        setIsLoading(false);
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: error,
+          confirmButtonColor: '#ef4444'
+        })
+      } finally {
+        setIsLoading(false);
+      }
   };
 
   return (
@@ -257,7 +225,7 @@ const AddGuide = () => {
             <label className="block text-sm font-medium">Guide Type</label>
             <select
               name="type"
-              value={form.type}
+              value={type}
               onChange={handleTypeChange}
               className="w-full border px-3 py-2 rounded"
             >
@@ -265,13 +233,13 @@ const AddGuide = () => {
               <option value="Subject">Subject</option>
             </select>
           </div>
-{/*          {form.type === "University" && (
+          {type === "University" && (
             <div>
               <label className="block text-sm font-medium">University</label>
               <select
                 name="university_id"
-                value={form.university_id}
-                onChange={handleChange}
+                value={typeID}
+                onChange={(e) => setTypeID(e.target.value)}
                 className="w-full border px-3 py-2 rounded"
               >
                 <option value="">Select University</option>
@@ -283,13 +251,13 @@ const AddGuide = () => {
               </select>
             </div>
           )}
-          {form.type === "Subject" && (
+          {type === "Subject" && (
             <div>
               <label className="block text-sm font-medium">Subject</label>
               <select
                 name="subject_id"
-                value={form.subject_id}
-                onChange={handleChange}
+                value={typeID}
+                onChange={(e) => setTypeID(e.target.value)}
                 className="w-full border px-3 py-2 rounded"
               >
                 <option value="">Select Subject</option>
@@ -300,7 +268,7 @@ const AddGuide = () => {
                 ))}
               </select>
             </div>
-          )}*/}
+          )}
         </div>
 
         {/* Title / Slug */}
@@ -310,8 +278,8 @@ const AddGuide = () => {
             <input
               type="text"
               name="title"
-              value={form.title}
-              onChange={handleChange}
+              value={title}
+              onChange={handleTitleChange}
               className="w-full border px-3 py-2 rounded"
               required
               placeholder="Enter guide title"
@@ -322,8 +290,8 @@ const AddGuide = () => {
             <input
               type="text"
               name="slug"
-              value={form.slug}
-              onChange={handleChange}
+              value={slug}
+              onChange={(e) => slug(e.target.value)}
               className="w-full border px-3 py-2 rounded bg-gray-50"
               placeholder="Auto-generated from title"
             />
@@ -333,193 +301,55 @@ const AddGuide = () => {
           </div>
         </div>
 
-        {/* SubTitle / Sort Order */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
- {/*         <div>
-            <label className="block text-sm font-medium">Sub Title</label>
-            <input
-              type="text"
-              name="subTitle"
-              value={form.subTitle}
-              onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
-              placeholder="Enter subtitle"
-            />
-          </div>*/}
-  {/*        <div>
-            <label className="block text-sm font-medium">Sort Order</label>
-            <input
-              type="number"
-              name="sortOrder"
-              value={form.sortOrder}
-              onChange={handleChange}
-              className="w-full border px-3 py-2 rounded"
-              placeholder="Enter sort order"
-            />
-          </div>*/}
-        </div>
-
         {/* Summernote Description */}
         <div>
           <label className="block text-sm font-medium">Description</label>
           <SummernoteEditor
-            value={form.description}
-            onChange={(val) => setForm({ ...form, description: val })}
+            value={description}
+            onChange={handleDescriptionChange}
           />
         </div>
 
-        {/* Schema */}
-{/*        <div>
-          <label className="block text-sm font-medium mb-2">Schema (FAQ)</label>
-          {form.schema.map((item, index) => (
-            <div
-              key={index}
-              className="border p-4 rounded space-y-2 bg-gray-50 mb-3"
-            >
-              <input
-                placeholder="Schema Question"
-                value={item.question}
-                onChange={(e) =>
-                  handleSchemaChange(index, "question", e.target.value)
-                }
-                className="w-full border px-3 py-2 rounded"
-              />
-              <textarea
-                placeholder="Schema Answer"
-                value={item.answer}
-                onChange={(e) =>
-                  handleSchemaChange(index, "answer", e.target.value)
-                }
-                className="w-full border px-3 py-2 rounded"
-                rows="3"
-              />
-              {index > 0 && (
-                <button
-                  type="button"
-                  onClick={() => removeSchema(index)}
-                  className="text-red-600 text-sm hover:text-red-800"
-                >
-                  Remove Schema
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={addSchema}
-            className="text-blue-600 text-sm hover:text-blue-800 border border-blue-300 px-3 py-1 rounded"
-          >
-            + Add Schema
-          </button>
-        </div>*/}
 
-        {/* Reviews */}
- {/*       <div>
-          <label className="block text-sm font-medium mb-2">Reviews</label>
-          {form.reviews.map((item, index) => (
-            <div
-              key={index}
-              className="border p-4 rounded bg-gray-50 space-y-2 mb-3"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  placeholder="Rating (1-5)"
-                  value={item.rating}
-                  onChange={(e) =>
-                    handleReviewChange(index, "rating", e.target.value)
-                  }
-                  className="border px-3 py-2 rounded"
-                  min="1"
-                  max="5"
-                />
-                <input
-                  type="date"
-                  placeholder="Date"
-                  value={item.date}
-                  onChange={(e) =>
-                    handleReviewChange(index, "date", e.target.value)
-                  }
-                  className="border px-3 py-2 rounded"
-                />
-              </div>
-              <input
-                placeholder="Author Name"
-                value={item.authorName}
-                onChange={(e) =>
-                  handleReviewChange(index, "authorName", e.target.value)
-                }
-                className="border px-3 py-2 rounded w-full"
-              />
-              <input
-                placeholder="Publisher Name"
-                value={item.publisherName}
-                onChange={(e) =>
-                  handleReviewChange(index, "publisherName", e.target.value)
-                }
-                className="border px-3 py-2 rounded w-full"
-              />
-              <input
-                placeholder="Review Name"
-                value={item.reviewName}
-                onChange={(e) =>
-                  handleReviewChange(index, "reviewName", e.target.value)
-                }
-                className="border px-3 py-2 rounded w-full"
-              />
-              <textarea
-                placeholder="Review Description"
-                value={item.reviewDescription}
-                onChange={(e) =>
-                  handleReviewChange(index, "reviewDescription", e.target.value)
-                }
-                className="border px-3 py-2 rounded w-full"
-                rows="3"
-              />
-              {index > 0 && (
-                <button
-                  type="button"
-                  onClick={() => removeReview(index)}
-                  className="text-red-600 text-sm hover:text-red-800"
-                >
-                  Remove Review
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={addReview}
-            className="text-green-600 text-sm hover:text-green-800 border border-green-300 px-3 py-1 rounded"
-          >
-            + Add Review
-          </button>
-        </div>*/}
-
-        {/* File Upload */}
         <div>
-          <label className="block text-sm font-medium">Featured Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files[0];
-              if (file) {
-                setForm((prev) => ({
-                  ...prev,
-                  featuredImage: file,
-                }));
-              }
-            }}
-            className="w-full border px-3 py-2 rounded"
-          />
-          {form.featuredImage && (
-            <img
-              src={URL.createObjectURL(form.featuredImage)}
-              alt="Preview"
-              className="mt-2 w-32 sm:w-40 h-20 sm:h-24 object-cover rounded border"
-            />
-          )}
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Featured Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileUpload(e, 'featured')}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+                disabled={isUploading}
+              />
+              {uploadedImages && (
+                <div className="mt-2">
+                  <img
+                    src={uploadedImages}
+                    alt="Logo preview"
+                    className="h-20 object-contain"
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => removeImage()}
+                    className="mt-1 text-red-600 text-sm"
+                    disabled={isUploading}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+              {isUploading && !uploadedImages && (
+                <div className="mt-2 text-sm text-gray-500">Uploading Image...</div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Meta Tags */}
@@ -528,26 +358,26 @@ const AddGuide = () => {
             <input
               type="checkbox"
               name="show_meta"
-              checked={form.show_meta === "on"}
-              onChange={handleChange}
+              checked={showMeta}
+              onChange={handleCheckboxChange}
             />
             <span>Enable Meta Tags</span>
           </label>
         </div>
-        {form.show_meta === "on" && (
+        {showMeta && (
           <div className="space-y-2">
             <input
               type="text"
               name="meta_title"
-              value={form.meta_title}
-              onChange={handleChange}
+              value={metaTitle}
+              onChange={(e) => setMetaTitle(e.target.value)}
               placeholder="Meta Title"
               className="w-full border px-3 py-2 rounded"
             />
             <textarea
               name="meta_description"
-              value={form.meta_description}
-              onChange={handleChange}
+              value={metaDescription}
+              onChange={(e) => setMetaDescription(e.target.value)}
               placeholder="Meta Description"
               className="w-full border px-3 py-2 rounded"
               rows="3"
@@ -555,8 +385,8 @@ const AddGuide = () => {
             <input
               type="text"
               name="meta_keywords"
-              value={form.meta_keywords}
-              onChange={handleChange}
+              value={metaKeywords}
+              onChange={(e) => setMetaKeywords(e.target.value)}
               placeholder="Meta Keywords (comma separated)"
               className="w-full border px-3 py-2 rounded"
             />
@@ -569,8 +399,8 @@ const AddGuide = () => {
             <input
               type="checkbox"
               name="active"
-              checked={form.active}
-              onChange={handleChange}
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.value)}
             />
             <span>Active</span>
           </label>
@@ -580,8 +410,9 @@ const AddGuide = () => {
         <button
           type="submit"
           className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full sm:w-auto"
+          disabled={isloading}
         >
-          Submit
+          {isloading ? "Submitting..." : "Submit"}
         </button>
       </form>
     </div>

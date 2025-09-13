@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
     const token = request.cookies.get('university-token')?.value;
 
     // Skip token check for the /api/login route
-    if (request.nextUrl.pathname.startsWith('/api/internal/login')) {
+    if (request.nextUrl.pathname.startsWith('/api/frontend/')) {
         return NextResponse.next();
     }
 
@@ -60,5 +60,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", '/api/:path*'],
 }

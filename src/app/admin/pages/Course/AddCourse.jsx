@@ -34,7 +34,6 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
     yearlyFee: '',
     application_fee: '',
     language: '',
-    schemaList: [{ question: '', answer: '' }],
     reviews: [{ rating: '', reviewDate: '', authorName: '', publisherName: '', reviewerName: '', reviewDescription: '' }],
     about: '',
     entry_requirments: '',
@@ -58,21 +57,20 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
         return [{ rating: '', reviewDate: '', authorName: '', publisherName: '', reviewerName: '', reviewDescription: '' }];
       }
     })();
-    const schemaQuestions = (initialData.sm_question || '').split('|');
-    const schemaAnswers = (initialData.sm_answer || '').split('|');
-    const schemaList = schemaQuestions.map((q, idx) => ({ question: q, answer: schemaAnswers[idx] || '' }));
+
+    console.log("Initial Data", initialData)
+    
     setFormData({
       courseName: initialData.name || '',
       duration: initialData.duration ?? '',
       duration_qty: initialData.duration_qty ?? '',
       duration_type: initialData.duration_type || '',
-      universityName: initialData.university_id ? String(initialData.university_id) : '',
+      universityName: initialData.university_id,
       subject: initialData.subject_id ? String(initialData.subject_id) : '',
-      qualification: initialData.qualification_name || (initialData.qualification != null ? String(initialData.qualification) : ''),
+      qualification: initialData.qualification_id,
       yearlyFee: initialData.yearly_fee ?? '',
       application_fee: initialData.application_fee ?? '',
       language: initialData.languages || '',
-      schemaList: schemaList.length > 0 ? schemaList : [{ question: '', answer: '' }],
       reviews: parsedReviews,
       about: initialData.about || '',
       entry_requirments: initialData.entry_requirments || '',
@@ -86,48 +84,49 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
     });
   }, [initialData]);
 
-  const [countries, setCountries] = useState([]);
+  const [universities, setUniversities] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [levels, setLevels] = useState([]);
 
+  // Getting Universities, Subjects and levels
   useEffect(() => {
-    async function fetchCountries() {
-      try {
-        const res = await fetch('/api/internal/countries');
-        const data = await res.json();
-        setCountries(data);
-      } catch (err) {
-        setCountries([]);
-      }
-    }
-    fetchCountries();
-  }, []);
 
-  useEffect(() => {
-    async function fetchSubjects() {
-      try {
-        const res = await fetch('/api/internal/subject');
-        const data = await res.json();
-        setSubjects(Array.isArray(data) ? data : data.data || []);
-      } catch (err) {
-        setSubjects([]);
-      }
-    }
-    fetchSubjects();
-  }, []);
+    const fetchdata = async () => {
+      const [levelResponse, subjectResponse, universityResponse] = await Promise.all([
+        fetch('/api/internal/new/getpostlevel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }),
+        fetch('/api/internal/new/getsubject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }),
+        fetch('/api/internal/new/getuniversity', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+      ]);
 
-  useEffect(() => {
-    async function fetchLevels() {
-      try {
-        const res = await fetch('/api/internal/add_post_level');
-        const data = await res.json();
-        setLevels(Array.isArray(data) ? data : data.data || []);
-      } catch (err) {
-        setLevels([]);
-      }
+      if(!levelResponse.ok || !subjectResponse.ok || !universityResponse.ok) throw new Error('Failed to fetch data')
+
+      const levelData = await levelResponse.json();
+      const subjectsData = await subjectResponse.json();
+      const universityData = await universityResponse.json();
+
+      setLevels(levelData.data);
+      setSubjects(subjectsData.data);
+      setUniversities(universityData.data)
     }
-    fetchLevels();
-  }, []);
+
+    fetchdata()
+
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -138,21 +137,6 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSchemaChange = (index, field, value) => {
-    const newSchemas = [...formData.schemaList];
-    newSchemas[index][field] = value;
-    setFormData({ ...formData, schemaList: newSchemas });
-  };
-
-  const addSchemaField = () => {
-    setFormData({ ...formData, schemaList: [...formData.schemaList, { question: '', answer: '' }] });
-  };
-
-  const removeSchemaField = (index) => {
-    const newSchemas = [...formData.schemaList];
-    newSchemas.splice(index, 1);
-    setFormData({ ...formData, schemaList: newSchemas });
-  };
 
   const handleReviewChange = (index, field, value) => {
     const newReviews = [...formData.reviews];
@@ -229,8 +213,6 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
         curriculum: formData.curriculum,
         deadline: formData.deadline ? new Date(formData.deadline) : null,
         starting_date: formData.starting_date ? new Date(formData.starting_date) : null,
-        sm_question: formData.schemaList.map((s) => s.question).join('|'),
-        sm_answer: formData.schemaList.map((s) => s.answer).join('|'),
         review_detail: JSON.stringify(formData.reviews),
         rating_count: formData.rating_count ? parseInt(formData.rating_count) : 0,
         review_count: formData.review_count ? parseInt(formData.review_count) : 0,
@@ -260,7 +242,7 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
             confirmButtonColor: '#0B6D76',
             confirmButtonText: 'OK'
           });
-          router.push('/admin/courses');
+          router.push('/admin/course');
         } else {
           const errorData = await res.json();
           throw new Error(errorData.message || 'Failed to add course');
@@ -286,7 +268,7 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {['courseName', 'duration', 'duration_qty', 'duration_type', 'universityName', 'yearlyFee', 'application_fee', 'language', 'deadline', 'starting_date', 'avg_review_value', 'review_count', 'rating_count', 'scholarship'].map((field) => (
+              {['courseName', 'duration', 'duration_qty', 'duration_type', 'yearlyFee', 'application_fee', 'language', 'deadline', 'starting_date', 'avg_review_value', 'review_count', 'rating_count', 'scholarship'].map((field) => (
                 <div key={field} className="space-y-1">
                   <label className="block text-sm font-medium capitalize text-gray-700">
                     {field.replace(/([A-Z_])/g, ' $1').replace(/_/g, ' ')}
@@ -301,6 +283,21 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
                   />
                 </div>
               ))}
+
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">University</label>
+                <select
+                  name="universityName"
+                  value={formData.universityName}
+                  onChange={handleChange}
+                  className="w-full border px-3 py-2 rounded-lg text-sm md:text-base"
+                >
+                  <option value="">Select University</option>
+                  {universities.map((university) => (
+                    <option key={university.id} value={university.id}>{university.name}</option>
+                  ))}
+                </select>
+              </div>
 
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">Subject</label>
@@ -327,49 +324,13 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
                 >
                   <option value="">Select Qualification</option>
                   {levels.map((level) => (
-                    <option key={level.id} value={level.title}>{level.title}</option>
+                    <option key={level.id} value={level.id}>{level.title}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* Schema Markup Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-800">Schema Markup</h3>
-              {formData.schemaList.map((item, index) => (
-                <div className="space-y-3 p-3 border rounded-lg" key={index}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input
-                      placeholder="Question"
-                      value={item.question}
-                      onChange={(e) => handleSchemaChange(index, 'question', e.target.value)}
-                      className="w-full border px-3 py-2 rounded-lg text-sm"
-                    />
-                    <input
-                      placeholder="Answer"
-                      value={item.answer}
-                      onChange={(e) => handleSchemaChange(index, 'answer', e.target.value)}
-                      className="w-full border px-3 py-2 rounded-lg text-sm"
-                    />
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => removeSchemaField(index)}
-                    className="flex items-center text-red-600 text-sm"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" /> Remove
-                  </button>
-                </div>
-              ))}
-              <button 
-                type="button" 
-                onClick={addSchemaField}
-                className="flex items-center text-blue-600 text-sm"
-              >
-                <Plus className="w-4 h-4 mr-1" /> Add Schema Field
-              </button>
-            </div>
-
+            
             {/* Reviews Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-800">Reviews</h3>
@@ -480,37 +441,61 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
   };
 
   return (
-    <form onSubmit={handleSubmit} className="min-h-screen flex flex-col md:flex-row bg-gray-100">
-      {/* Mobile Menu Button */}
-      <div className="md:hidden bg-white p-4 flex justify-between items-center border-b">
-        <h2 className="text-xl font-bold text-gray-800">Add Course</h2>
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="text-gray-500 hover:text-gray-600"
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {mobileMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
-      </div>
+    <>
+    <title>Add New Course - University Page</title>
+    <meta name="description" content="Add a new course to the university page" />
+      <form onSubmit={handleSubmit} className="min-h-screen flex flex-col md:flex-row bg-gray-100">
+        {/* Mobile Menu Button */}
+        <div className="md:hidden bg-white p-4 flex justify-between items-center border-b">
+          <h2 className="text-xl font-bold text-gray-800">Add Course</h2>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="text-gray-500 hover:text-gray-600"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
 
-      {/* Mobile Sidebar */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b shadow-lg p-4">
+        {/* Mobile Sidebar */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-b shadow-lg p-4">
+            <ul className="space-y-2">
+              {tabs.map((tab) => (
+                <li key={tab}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                      activeTab === tab ? 'bg-[#0B6D76] text-white' : 'hover:bg-gray-200'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block w-64 bg-white border-r shadow-lg p-6">
+          <h2 className="text-xl font-bold mb-6 text-gray-800">{initialData ? 'Edit Course' : 'Add Course'}</h2>
           <ul className="space-y-2">
             {tabs.map((tab) => (
               <li key={tab}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setActiveTab(tab);
-                    setMobileMenuOpen(false);
-                  }}
+                  onClick={() => setActiveTab(tab)}
                   className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
                     activeTab === tab ? 'bg-[#0B6D76] text-white' : 'hover:bg-gray-200'
                   }`}
@@ -521,78 +506,58 @@ export default function AddCourse({ initialData = null, onSubmit, loading = fals
             ))}
           </ul>
         </div>
-      )}
 
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block w-64 bg-white border-r shadow-lg p-6">
-        <h2 className="text-xl font-bold mb-6 text-gray-800">{initialData ? 'Edit Course' : 'Add Course'}</h2>
-        <ul className="space-y-2">
-          {tabs.map((tab) => (
-            <li key={tab}>
+        {/* Main Content */}
+        <div className="flex-1 p-4 md:p-6 lg:p-8 bg-white">
+          <div className="max-w-4xl mx-auto">
+            {/* Mobile Tab Indicator */}
+            <div className="md:hidden mb-6">
+              <div className="bg-[#0B6D76] text-white px-4 py-2 rounded-lg">
+                {activeTab}
+              </div>
+            </div>
+
+            {renderContent()}
+
+            <div className="flex flex-col-reverse md:flex-row justify-end mt-8 gap-3">
+              {onCancel ? (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => router.push('/admin/courses')}
+                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+              )}
               <button
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                  activeTab === tab ? 'bg-[#0B6D76] text-white' : 'hover:bg-gray-200'
-                }`}
+                type="submit"
+                className="bg-[#0B6D76] text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting}
               >
-                {tab}
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {initialData ? 'Updating...' : 'Saving...'}
+                  </span>
+                ) : (initialData ? 'Update Course' : 'Save Course')}
               </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 p-4 md:p-6 lg:p-8 bg-white">
-        <div className="max-w-4xl mx-auto">
-          {/* Mobile Tab Indicator */}
-          <div className="md:hidden mb-6">
-            <div className="bg-[#0B6D76] text-white px-4 py-2 rounded-lg">
-              {activeTab}
             </div>
           </div>
-
-          {renderContent()}
-
-          <div className="flex flex-col-reverse md:flex-row justify-end mt-8 gap-3">
-            {onCancel ? (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => router.push('/admin/courses')}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              type="submit"
-              className="bg-[#0B6D76] text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  {initialData ? 'Updating...' : 'Saving...'}
-                </span>
-              ) : (initialData ? 'Update Course' : 'Save Course')}
-            </button>
-          </div>
         </div>
-      </div>
-    </form>
+      </form>
+    </>
   );
 }

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../../lib/prisma";
+import pool from "../../../../../lib/db/db";
+import ResultSetHeader from "mysql2"
 
 // GET single course by ID
-export async function GET(request, { params }) {
+/*export async function GET(request, { params }) {
   const id = parseInt(params.id);
   
   try {
@@ -97,58 +98,108 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}*/
 // PUT update course by ID
 export async function PUT(req, { params }) {
-  const id = parseInt(params.id);
+
+  const {id} = await params;
+
   try {
     const data = await req.json();
 
-    const updatedCourse = await prisma.courses.update({
-      where: { id },
-      data: {
-        name: data.name,
-        university_id: data.university_id,
-        subject_id: data.subject_id,
-        sm_question: data.sm_question,
-        sm_answer: data.sm_answer,
-        review_detail: data.review_detail,
-        rating_count: data.rating_count,
-        review_count: data.review_count,
-        avg_review_value: data.avg_review_value,
-        qualification: data.qualification,
-        duration: data.duration,
-        duration_qty: data.duration_qty,
-        duration_type: data.duration_type,
-        yearly_fee: data.yearly_fee,
-        application_fee: data.application_fee,
-        languages: data.languages,
-        starting_date: data.starting_date ? new Date(data.starting_date) : null,
-        deadline: data.deadline ? new Date(data.deadline) : null,
-        about: data.about,
-        entry_requirments: data.entry_requirments,
-        curriculum: data.curriculum,
-        scholarship: data.scholarship,
-        sort_order: data.sort_order,
-        active: data.active,
-        display: data.display,
-        popular: data.popular,
-      },
-    });
+    // Build the SQL UPDATE query
+    const query = `
+      UPDATE courses 
+      SET 
+        name = ?, 
+        university_id = ?, 
+        subject_id = ?, 
+        review_detail = ?, 
+        rating_count = ?, 
+        review_count = ?, 
+        avg_review_value = ?, 
+        qualification = ?, 
+        duration = ?, 
+        duration_qty = ?, 
+        duration_type = ?, 
+        yearly_fee = ?, 
+        application_fee = ?, 
+        languages = ?, 
+        starting_date = ?, 
+        deadline = ?, 
+        about = ?, 
+        entry_requirments = ?, 
+        curriculum = ?, 
+        scholarship = ?, 
+        sort_order = ?, 
+        active = ?, 
+        display = ?
+      WHERE id = ?
+    `;
 
-    return NextResponse.json({ success: true, data: updatedCourse });
+    // Set the parameters for the query
+    const params = [
+      data.name,
+      data.university_id,
+      data.subject_id,
+      data.review_detail,
+      data.rating_count,
+      data.review_count,
+      data.avg_review_value,
+      data.qualification,
+      data.duration,
+      data.duration_qty,
+      data.duration_type,
+      data.yearly_fee,
+      data.application_fee,
+      data.languages,
+      data.starting_date ? new Date(data.starting_date) : null,
+      data.deadline ? new Date(data.deadline) : null,
+      data.about,
+      data.entry_requirments,
+      data.curriculum,
+      data.scholarship,
+      data.sort_order,
+      data.active,
+      data.display,
+      id, // course ID
+    ];
+
+    // Execute the query using the pool
+    const [result] = await pool.execute(query, params); // Destructure the result to get the ResultSetHeader
+
+    // Check if any rows were affected
+    if (result.affectedRows === 0) {
+      return NextResponse.json({ success: false, message: 'Course not found or no changes made' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: "Course updated successfully" });
   } catch (error) {
+    console.error('Error updating course:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 // DELETE course by ID
 export async function DELETE(req, { params }) {
+
   const id = parseInt(params.id);
+  
   try {
-    await prisma.courses.delete({ where: { id } });
+    // Delete the course by id
+    const [result] = await pool.execute(
+      'DELETE FROM courses WHERE id = ?',
+      [id]
+    );
+
+    // Check if any row was affected
+    if (result.affectedRows === 0) {
+      return NextResponse.json({ success: false, message: 'Course not found' }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true, message: "Course deleted successfully" });
   } catch (error) {
+    console.error('Error deleting course:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
+  } 
 }

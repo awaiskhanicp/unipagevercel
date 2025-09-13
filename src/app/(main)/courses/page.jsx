@@ -2,51 +2,52 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Button from '../../components/atoms/Button';
 import Container from '../../components/atoms/Container';
 import Heading from '../../components/atoms/Heading';
 import CoursePageType from '../../components/organisms/CoursePageType';
 import CoursesPageSubject from '../../components/organisms/CoursesPageSubject';
 import Paragraph from '../../components/atoms/Paragraph';
-import { FaHeart, FaRegHeart } from 'react-icons/fa';
 import { useWishlist } from '../../context/WishlistContext';
-import { MdCompare } from "react-icons/md";
 
 const CoursesPage = () => {
   const [levels, setLevels] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [searchType, setSearchType] = useState('');
   const [searchSubject, setSearchSubject] = useState('');
-  const { toggleWishlist, isWishlisted } = useWishlist();
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchLevels = async () => {
-      try {
-        const res = await fetch('/api/internal/add_post_level');
-        const data = await res.json();
-        setLevels(Array.isArray(data) ? data : data.data || []);
-      } catch (error) {
-        console.error('Failed to fetch levels:', error);
-        setLevels([]);
-      }
-    };
-    fetchLevels();
-  }, []);
 
   useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        const res = await fetch('/api/internal/subject');
-        const data = await res.json();
-        setSubjects(Array.isArray(data) ? data : data.data || []);
-      } catch (error) {
-        console.error('Failed to fetch subjects:', error);
-        setSubjects([]);
-      }
-    };
-    fetchSubjects();
-  }, []);
+
+    const fetchdata = async () => {
+      const [levels, subjects] = await Promise.all([
+        fetch('/api/frontend/getpostlevel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }),
+        fetch('/api/frontend/getsubject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }),
+      ]);
+
+      if(!levels.ok || !subjects.ok) throw new Error('Failed to fetch data')
+
+      const levelData = await levels.json();
+      const subjectsData = await subjects.json();
+
+      setLevels(levelData.data);
+      setSubjects(subjectsData.data);
+
+    }
+
+    fetchdata()
+
+  }, [])
 
   const filteredLevels = levels.filter((level) =>
     level.title?.toLowerCase().includes(searchType.toLowerCase())

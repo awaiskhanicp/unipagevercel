@@ -70,7 +70,7 @@ const FreeConsultation = () => {
     const controller = new AbortController();
     const fetchCountries = async () => {
       try {
-        const res = await fetch(`/api/internal/countries_db`, { signal: controller.signal });
+        const res = await fetch(`/api/frontend/countries_db`, { signal: controller.signal });
         if (!res.ok) throw new Error(`Failed to fetch countries: ${res.status}`);
         const data = await res.json();
         setCountries(data.countries || []);
@@ -97,7 +97,7 @@ const FreeConsultation = () => {
     const controller = new AbortController();
     const fetchStates = async () => {
       try {
-        const res = await fetch(`/api/internal/states_db?countryId=${countryId}`, {
+        const res = await fetch(`/api/frontend/states_db?countryId=${countryId}`, {
           signal: controller.signal
         });
         if (!res.ok) throw new Error(`Failed to fetch states: ${res.status}`);
@@ -127,7 +127,7 @@ const FreeConsultation = () => {
     const controller = new AbortController();
     const fetchCities = async () => {
       try {
-        const res = await fetch(`/api/internal/cities_db?stateId=${stateId}`, {
+        const res = await fetch(`/api/frontend/cities_db?stateId=${stateId}`, {
           signal: controller.signal
         });
         if (!res.ok) throw new Error(`Failed to fetch cities: ${res.status}`);
@@ -182,7 +182,7 @@ const FreeConsultation = () => {
         city: formData.city ? Number(formData.city) : null
       };
 
-      const response = await fetch('/api/internal/freeconsulation', {
+      const response = await fetch('/api/frontend/free-consultations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

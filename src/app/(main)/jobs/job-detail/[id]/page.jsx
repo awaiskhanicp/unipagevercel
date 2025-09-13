@@ -31,16 +31,14 @@ const JobDetailPage = () => {
       try {
         setLoading(true);
         setNotFound(false);
-        const response = await fetch(`/api/internal/jobs/${id}`);
+        const response = await fetch(`/api/frontend/jobs/${id}`);
         if (!response.ok) throw new Error("Failed to fetch job");
         const data = await response.json();
 
-        if (!data || !data.id) {
-          setNotFound(true);
-          setJob(null);
-        } else {
-          setJob(data);
-        }
+        console.log("Jobs Fetched", data.data)
+
+        setJob(data.data);
+
       } catch (error) {
         setNotFound(true);
         setJob(null);
@@ -130,7 +128,7 @@ const JobDetailPage = () => {
     formData.append('resume', form.resume);
 
     try {
-      const res = await fetch("/api/internal/job-applies", {
+      const res = await fetch("/api/frontend/jobs/job-applies", {
         method: "POST",
         body: formData,
       });

@@ -8,7 +8,7 @@ import { FaFacebook, FaLinkedin, FaTwitter, FaWhatsapp } from 'react-icons/fa';
 
 // This function runs on the server to generate metadata
 export async function generateMetadata({ params }) {
-  const { slug } = params;
+  const { slug } = await params;
   
   try {
     // Fetch guide data on the server using relative path
@@ -77,7 +77,7 @@ export async function generateMetadata({ params }) {
 async function getGuideData(slug) {
   try {
     // Use relative path for API call
-    const response = await fetch(`http://localhost:3000/api/internal/guides/${encodeURIComponent(slug)}`, {
+    const response = await fetch(`${process.env.APP_URL}/api/frontend/getguides/${encodeURIComponent(slug)}`, {
       cache: 'no-store' // Don't cache for individual page data
     });
     
@@ -103,7 +103,7 @@ async function getGuideData(slug) {
 
 async function getRelatedGuides(currentGuideId) {
   try {
-    const response = await fetch(`http://localhost:3000/api/internal/guides`, {
+    const response = await fetch(`${process.env.APP_URL}/api/frontend/getguides`, {
       cache: 'force-cache' // Cache related guides
     });
     
@@ -133,7 +133,7 @@ export default async function GuideDetailPage({ params }) {
   const relatedGuides = await getRelatedGuides(guide.id);
   
   // Prepare share URLs
-  const currentUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/guides/${slug}`;
+  const currentUrl = `${process.env.APP_URL || 'http://localhost:3000'}/guides/${slug}`;
   const shareTitle = encodeURIComponent(guide.title);
 
   const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
