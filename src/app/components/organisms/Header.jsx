@@ -63,8 +63,8 @@ const navCategories = [
     hasDropdown: true,
     href: '/about',
     items: [
-      { name: 'About Us', href: '/aboutus' },
-      { name: 'Our Team', href: '/ourteam' },
+      { name: 'About Us', href: '/about-us' },
+      { name: 'Our Team', href: '/our-team' },
       { name: 'Contact Us', href: '/contact-us' }
     ]
   },
